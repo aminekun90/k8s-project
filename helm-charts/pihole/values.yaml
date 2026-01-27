@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  repository: pihole/pihole
+  tag: latest
+  pullPolicy: IfNotPresent
+
+namespace: pihole
+
+webPassword: "correct horse battery staple"
+
+hostNetwork: true
+
+persistence:
+  enabled: true
+  piholeStorage: 2Gi
+  dnsmasqStorage: 1Gi
+
+dns:
+  upstreamServers:
+    - 1.1.1.1
+    - 8.8.8.8
+
+service:
+  type: ClusterIP
+  ports:
+    - name: dns
+      protocol: UDP
+      port: 53
+    - name: dns-tcp
+      protocol: TCP
+      port: 53
+    - name: http
+      protocol: TCP
+      port: 80
+    - name: https
+      protocol: TCP
+      port: 443
+
+timezone: "Europe/London"
