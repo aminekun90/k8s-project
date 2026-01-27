@@ -15,15 +15,12 @@ spec:
       labels:
         {{- include "pihole.selectorLabels" . | nindent 8 }}
     spec:
-      # Binds the Pod directly to the Raspberry Pi network stack
       hostNetwork: {{ .Values.hostNetwork }}
-      # Allows the pod to resolve internal K8s services while on hostNetwork
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: pihole
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        # We do not define 'ports' here to avoid scheduler conflicts with Nginx on Port 80
         env:
         - name: TZ
           value: {{ .Values.timezone | quote }}
@@ -32,14 +29,13 @@ spec:
         - name: VIRTUAL_HOST
           value: "pi.hole"
         
-        # DYNAMIC IP DETECTION: 
-        # Grabs the Raspberry Pi's physical IP and tells Pi-hole to use it for 'pi.hole'
-        - name: FTLCONF_dns_override_pihole_address
+        # DYNAMIC IP OVERRIDE: Tells Pi-hole to use the Pi's IP for DNS
+        - name: FTLCONF_dns_piholeAddress
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
 
-        # Map all other variables from values.yaml
+        # Map variables from values.yaml
         {{- range $key, $value := .Values.extraEnv }}
         - name: {{ $key }}
           value: {{ $value | quote }}
@@ -50,10 +46,8 @@ spec:
           mountPath: /etc/pihole
         - name: dnsmasq-data
           mountPath: /etc/dnsmasq.d
-        
         securityContext:
           {{- toYaml .Values.securityContext | nindent 10 }}
-          
       volumes:
       - name: pihole-data
         persistentVolumeClaim:
