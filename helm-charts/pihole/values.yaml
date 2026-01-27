@@ -8,26 +8,23 @@ image:
 timezone: "Europe/London"
 adminPassword: "correct horse battery staple"
 
-# Directly uses the Raspberry Pi's network interface
 hostNetwork: true
 
 extraEnv:
-  # V6.4.1 Corrected Syntax
+  # v6.4+ Correct Syntax (Matches the [dns] and [webserver] sections)
   FTLCONF_dns_listeningMode: "all"
   FTLCONF_dns_hostRecord: "false"
+  
+  # This replaces 'allowedHosts: *' and fixes the 404
   FTLCONF_webserver_serve_all: "true"
-
-  # Fix for 'unknown' trustedProxies (v6.4 uses underscores for the nested keys)
+  
+  # v6.4+ Trusted Proxies syntax
   FTLCONF_webserver_api_trustedProxies: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 
 securityContext:
   privileged: true
   capabilities:
-    add:
-      - NET_ADMIN
-      - SYS_TIME
-      - SYS_NICE
-      - CHOWN
+    add: ["NET_ADMIN", "SYS_TIME", "SYS_NICE", "CHOWN"]
 
 persistence:
   storageClass: "local-path"
@@ -45,7 +42,6 @@ ingress:
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
     nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
   hosts:
     - host: pi.hole
