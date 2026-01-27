@@ -13,7 +13,7 @@ spec:
       labels:
         app: pihole
     spec:
-      hostNetwork: true
+      #hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: pihole
