@@ -43,9 +43,10 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    # Force Nginx to tell the Pod its name is pi.hole
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
     nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
   hosts:
     - host: pi.hole
       paths:
