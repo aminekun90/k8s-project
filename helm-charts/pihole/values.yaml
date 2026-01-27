@@ -16,6 +16,8 @@ ingress:
     # Forces Pi-hole v6 to recognize the domain coming through Nginx
     nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
     nginx.ingress.kubernetes.io/proxy-set-headers: "Host=pi.hole"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Host "pi.hole";
 
 # Official v6.4.1 FTLCONF keys from the Dec 2025 Docs
 extraEnv:
