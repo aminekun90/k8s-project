@@ -25,7 +25,7 @@ metadata:
   name: {{ include "pihole.fullname" . }}-dns
   namespace: {{ .Release.Namespace }}
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     {{- include "pihole.selectorLabels" . | nindent 4 }}
   ports:
@@ -33,9 +33,7 @@ spec:
       port: 53
       targetPort: 53
       protocol: UDP
-      nodePort: {{ .Values.service.dnsUdpPort }}
     - name: dns-tcp
       port: 53
       targetPort: 53
       protocol: TCP
-      nodePort: {{ .Values.service.dnsTcpPort }}
