@@ -1,28 +1,29 @@
-{{- if .Values.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "pihole.fullname" . }}
   namespace: {{ .Release.Namespace }}
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.ingress.className }}
-    # Pi-hole v6 needs this to handle the backend paths correctly
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    kubernetes.io/ingress.class: nginx
+    # This is the magic line for IP-based access
+    nginx.ingress.kubernetes.io/default-backend: {{ include "pihole.fullname" . }}
+    nginx.ingress.kubernetes.io/app-root: /admin
 spec:
-  ingressClassName: {{ .Values.ingress.className }}
+  ingressClassName: nginx
+  # Adding this block allows the IP address to work
+  defaultBackend:
+    service:
+      name: {{ include "pihole.fullname" . }}
+      port:
+        number: 80
   rules:
-    {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
-      http:
-        paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
-            backend:
-              service:
-                name: {{ include "pihole.fullname" $ }}
-                port:
-                  number: 80
-          {{- end }}
-    {{- end }}
-{{- end }}
+  - host: pi.hole
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "pihole.fullname" . }}
+            port:
+              number: 80
