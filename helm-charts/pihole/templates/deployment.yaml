@@ -17,6 +17,9 @@ spec:
           value: {{ .Values.timezone | quote }}
         - name: WEBPASSWORD
           value: {{ .Values.adminPassword | quote }}
+        # This is the standard v6 PTR setting the log suggested
+        - name: FTLCONF_dns_piholePTR
+          value: "PI.HOLE"
         
         # DYNAMIC IP: Tells Pi-hole to reply as the physical Pi IP
         - name: FTLCONF_dns_reply_host_IPv4
