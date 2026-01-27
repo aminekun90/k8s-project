@@ -8,15 +8,15 @@ spec:
   selector:
     app: pihole
   ports:
-    - name: dns
-      protocol: UDP
-      port: 53
     - name: dns-tcp
-      protocol: TCP
       port: 53
+      protocol: TCP
+      targetPort: 53
+    - name: dns-udp
+      port: 53
+      protocol: UDP
+      targetPort: 53
     - name: http
-      protocol: TCP
       port: 80
-    - name: https
       protocol: TCP
-      port: 443
+      targetPort: 80
