@@ -18,22 +18,18 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    # Rule 1: Handle requests for "pi.hole"
-    {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
+    # Handle the hostname pi.hole
+    - host: "pi.hole"
       http:
         paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
+          - path: /
+            pathType: Prefix
             backend:
               service:
-                name: {{ include "pihole.fullname" $ }}
+                name: {{ include "pihole.fullname" . }}
                 port:
                   number: 80
-          {{- end }}
-    {{- end }}
-    # Rule 2: Handle requests for the IP address (Catch-all)
+    # Handle the IP address access directly
     - http:
         paths:
           - path: /

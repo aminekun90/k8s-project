@@ -11,12 +11,20 @@ adminPassword: "correct horse battery staple"
 hostNetwork: false
 
 extraEnv:
-  # 1. This tells Pi-hole to accept ANY hostname (Safe because Ingress filters it first)
+  # v6: Essential for Web/API access through Ingress
   FTLCONF_webserver_api_allowedHosts: "*"
-  # 2. Automatically trust the entire Kubernetes pod and service networks
-  FTLCONF_webserver_api_trustedProxies: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-  # 3. Use the standard Pi-hole hostname
-  VIRTUAL_HOST: "pi.hole"
+  FTLCONF_webserver_servername: "pi.hole"
+  FTLCONF_webserver_api_trustedProxies: "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24"
+  # v6: Ensure the API is enabled for the dashboard
+  FTLCONF_webserver_api_enabled: "true"
+
+# As requested for network/time management
+securityContext:
+  capabilities:
+    add:
+      - NET_ADMIN
+      - SYS_TIME
+      - SYS_NICE
 
 persistence:
   storageClass: "local-path"
@@ -26,8 +34,8 @@ persistence:
     size: 1Gi
 
 service:
-  dnsUdpPort: 30053
-  dnsTcpPort: 30054
+  dnsUdpPort: 53
+  dnsTcpPort: 53
   webPort: 80 
   httpsPort: 443
 
@@ -35,13 +43,10 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    # Forces any root request to go straight to /admin
-    nginx.ingress.kubernetes.io/app-root: /admin
-    # Important for v6 API stability
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    kubernetes.io/ingress.class: nginx
-    # This is the "proper" way: tell Nginx to pass the hostname through to the pod
+    # Important: Let Nginx handle the header pass-through
     nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    # v6 works better without the app-root redirect annotation
   hosts:
     - host: pi.hole
       paths:
