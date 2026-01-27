@@ -5,7 +5,7 @@ metadata:
   namespace: pihole
 spec:
   strategy:
-    type: Recreate
+    type: Recreate       # hostNetwork requires single pod per node
   replicas: 1
   selector:
     matchLabels:
@@ -15,7 +15,7 @@ spec:
       labels:
         app: pihole
     spec:
-      hostNetwork: true                 # listen directly on Pi IP
+      hostNetwork: true                 # bind directly to Pi's IP
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: pihole
@@ -40,8 +40,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/pihole
           name: pihole-data
-        #- mountPath: /etc/dnsmasq.d
-        #  name: dnsmasq-data
+        # - mountPath: /etc/dnsmasq.d
+        #   name: dnsmasq-data
         securityContext:
           capabilities:
             add:
@@ -52,6 +52,6 @@ spec:
       - name: pihole-data
         persistentVolumeClaim:
           claimName: pihole-pvc
-      #- name: dnsmasq-data
-      #  persistentVolumeClaim:
-      #    claimName: dnsmasq-pvc
+      # - name: dnsmasq-data
+      #   persistentVolumeClaim:
+      #     claimName: dnsmasq-pvc

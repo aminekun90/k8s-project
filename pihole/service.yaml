@@ -4,7 +4,6 @@ metadata:
   name: pihole
   namespace: pihole
 spec:
-  type: ClusterIP
   selector:
     app: pihole
   ports:
