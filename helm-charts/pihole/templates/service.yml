@@ -1,15 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "pihole.fullname" . }}
+  # MUST match the Ingress $serviceName logic from your GitHub template
+  name: {{ include "pihole.fullname" . }}-web
   namespace: {{ .Release.Namespace }}
-  annotations:
-    # This helps Nginx Ingress find the pod quickly on hostNetwork
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "80"
 spec:
   type: ClusterIP
-  # Internal traffic only - this is what the Ingress talks to
   selector:
     {{- include "pihole.selectorLabels" . | nindent 4 }}
   ports:
@@ -17,27 +13,14 @@ spec:
       port: 80
       targetPort: 80
       protocol: TCP
-    - name: https
-      port: 443
-      targetPort: 443
-      protocol: TCP
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "pihole.fullname" . }}-dns
   namespace: {{ .Release.Namespace }}
-  annotations:
-    # If you use MetalLB, this allows both TCP and UDP on the same IP
-    metallb.universe.tf/allow-shared-ip: pihole-svc
 spec:
-  # Using LoadBalancer is fine, but it will stay 'Pending' if MetalLB isn't set up.
-  # If it stays pending, change 'LoadBalancer' to 'NodePort'.
   type: LoadBalancer
-  # If you have an IP you want to fix for your router, uncomment the next line:
-  # loadBalancerIP: 192.168.1.252 
   selector:
     {{- include "pihole.selectorLabels" . | nindent 4 }}
   ports:
@@ -49,8 +32,3 @@ spec:
       port: 53
       targetPort: 53
       protocol: TCP
-    # Port 123 is required for Pi-hole v6 NTP sync shown in your logs
-    - name: ntp-udp
-      port: 123
-      targetPort: 123
-      protocol: UDP

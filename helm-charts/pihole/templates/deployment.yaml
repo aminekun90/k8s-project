@@ -15,28 +15,23 @@ spec:
       labels:
         {{- include "pihole.selectorLabels" . | nindent 8 }}
     spec:
-      hostNetwork: {{ .Values.hostNetwork }}
+      hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: pihole
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "pihole/pihole:latest"
+        imagePullPolicy: IfNotPresent
         env:
         - name: TZ
           value: {{ .Values.timezone | quote }}
         - name: WEBPASSWORD
           value: {{ .Values.adminPassword | quote }}
-        # Official Key: [dns.reply.host] IPv4
+        # Official v6 dynamic IP mapping
         - name: FTLCONF_dns_reply_host_IPv4
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        {{- range $key, $value := .Values.extraEnv }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
         
-        # Pull any extra vars from values.yaml
         {{- range $key, $value := .Values.extraEnv }}
         - name: {{ $key }}
           value: {{ $value | quote }}

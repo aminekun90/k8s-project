@@ -1,20 +1,30 @@
-replicaCount: 1
-
-image:
-  repository: pihole/pihole
-  tag: latest
-  pullPolicy: IfNotPresent
-
 timezone: "Europe/London"
-adminPassword: "correct horse battery staple"
+adminPassword: "pihole" # Change this!
 
+# Network Strategy
 hostNetwork: true
 
+# Ingress Configuration (Matches the GitHub Template)
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  path: /
+  pathType: Prefix
+  hosts:
+    - pi.hole
+  annotations:
+    # Forces Pi-hole v6 to recognize the domain coming through Nginx
+    nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
+    nginx.ingress.kubernetes.io/proxy-set-headers: "Host=pi.hole"
+
+# Official v6.4.1 FTLCONF keys from the Dec 2025 Docs
 extraEnv:
   FTLCONF_dns_listeningMode: "ALL"
   FTLCONF_dns_hostRecord: "false"
   FTLCONF_webserver_serve_all: "true"
+  FTLCONF_webserver_domain: "pi.hole"
 
+# Hardware Permissions
 securityContext:
   privileged: true
   capabilities:
@@ -26,19 +36,3 @@ persistence:
     size: 2Gi
   dnsmasq:
     size: 1Gi
-
-service:
-  type: ClusterIP
-  webPort: 80 
-
-ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
-  hosts:
-    - host: pi.hole
-      paths:
-        - path: /
-          pathType: Prefix
