@@ -28,7 +28,7 @@ ingress:
 # Persistence (Adjust StorageClass to yours, e.g., glusterfs-storage)
 persistentVolumeClaim:
   enabled: true
-  storageClass: "glusterfs-storage" 
+  storageClass: "local-path"
 
 # Your Lists from GitHub
 adlists:
