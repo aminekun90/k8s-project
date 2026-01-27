@@ -1,10 +1,20 @@
-timezone: "Europe/London"
-adminPassword: "pihole" # Change this!
+adminPassword: "pihole"
+timezone: "Europe/Paris"
 
-# Network Strategy
+# Network Configuration
 hostNetwork: true
 
-# Ingress Configuration (Matches the GitHub Template)
+# The MoJo2600 v6 Configuration Block
+config:
+  dns:
+    listeningMode: "ALL"
+    piholePTR: "PI.HOLE"
+    hostRecord: "false"  # CRITICAL: Stops the 'Bad host-record' error
+  webserver:
+    serve_all: true      # CRITICAL: Fixes the 404 behind Ingress
+    domain: "pi.hole"
+
+# Ingress Configuration
 ingress:
   enabled: true
   ingressClassName: nginx
@@ -13,26 +23,17 @@ ingress:
   hosts:
     - pi.hole
   annotations:
-    # Forces Pi-hole v6 to recognize the domain coming through Nginx
     nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
-    nginx.ingress.kubernetes.io/proxy-set-headers: "Host=pi.hole"
 
-# Official v6.4.1 FTLCONF keys from the Dec 2025 Docs
-extraEnv:
-  FTLCONF_dns_listeningMode: "ALL"
-  FTLCONF_dns_hostRecord: "false"
-  FTLCONF_webserver_serve_all: "true"
-  FTLCONF_webserver_domain: "pi.hole"
+# Persistence (Adjust StorageClass to yours, e.g., glusterfs-storage)
+persistentVolumeClaim:
+  enabled: true
+  storageClass: "glusterfs-storage" 
 
-# Hardware Permissions
-securityContext:
-  privileged: true
-  capabilities:
-    add: ["NET_ADMIN", "SYS_TIME", "SYS_NICE", "CHOWN"]
-
-persistence:
-  storageClass: "local-path"
-  pihole:
-    size: 2Gi
-  dnsmasq:
-    size: 1Gi
+# Your Lists from GitHub
+adlists:
+  - https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt
+  - https://v.firebog.net/hosts/static/w3kbl.txt
+whitelist:
+  - github.com
+  - googleapis.com

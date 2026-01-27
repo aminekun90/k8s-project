@@ -2,11 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "pihole.fullname" . }}
-  namespace: {{ .Release.Namespace }}
 spec:
   strategy:
     type: Recreate
-  replicas: 1
   selector:
     matchLabels:
       {{- include "pihole.selectorLabels" . | nindent 6 }}
@@ -15,35 +13,26 @@ spec:
       labels:
         {{- include "pihole.selectorLabels" . | nindent 8 }}
     spec:
-      hostNetwork: true
+      hostNetwork: {{ .Values.hostNetwork }}
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: pihole
         image: "pihole/pihole:latest"
-        imagePullPolicy: IfNotPresent
         env:
         - name: TZ
           value: {{ .Values.timezone | quote }}
         - name: WEBPASSWORD
           value: {{ .Values.adminPassword | quote }}
-        # Official v6 dynamic IP mapping
+        # Map dynamic Host IP for v6
         - name: FTLCONF_dns_reply_host_IPv4
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        
-        {{- range $key, $value := .Values.extraEnv }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
-
         volumeMounts:
         - name: pihole-data
           mountPath: /etc/pihole
         - name: dnsmasq-data
           mountPath: /etc/dnsmasq.d
-        securityContext:
-          {{- toYaml .Values.securityContext | nindent 10 }}
       volumes:
       - name: pihole-data
         persistentVolumeClaim:

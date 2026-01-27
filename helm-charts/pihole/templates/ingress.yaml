@@ -1,47 +1,24 @@
 {{- if .Values.ingress.enabled -}}
-{{- /* We use '-web' to match the updated Service name */ -}}
 {{- $serviceName := printf "%s-%s" (include "pihole.fullname" .) "web" -}}
-{{- $ingressPath := .Values.ingress.path -}}
-{{- $pathType := .Values.ingress.pathType -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "pihole.fullname" . }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "pihole.labels" . | nindent 4 }}
   annotations:
-    # Essential for Pi-hole v6: Force the Host header to 'pi.hole'
-    # This prevents the "404 Page Not Found" black screen.
-    nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
-    
-    # Standard Nginx optimizations for Pi-hole
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    
-    # Inject any custom annotations from values.yaml
-    {{- with .Values.ingress.annotations }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
 spec:
-  {{- if .Values.ingress.ingressClassName }}
   ingressClassName: {{ .Values.ingress.ingressClassName }}
-  {{- end }}
-  {{- if .Values.ingress.tls }}
-  tls:
-    {{- toYaml .Values.ingress.tls | nindent 4 }}
-  {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
+  {{- range .Values.ingress.hosts }}
     - host: {{ . | quote }}
       http:
         paths:
-          - path: {{ $ingressPath }}
-            pathType: {{ $pathType }}
+          - path: {{ $.Values.ingress.path }}
+            pathType: {{ $.Values.ingress.pathType }}
             backend:
               service:
                 name: {{ $serviceName }}
-                port: 
+                port:
                   name: http
-    {{- end }}
+  {{- end }}
 {{- end }}
