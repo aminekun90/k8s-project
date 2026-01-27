@@ -1,0 +1,20 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: adhan-frontend
+#   namespace: adhan
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: adhan-frontend
+#   template:
+#     metadata:
+#       labels:
+#         app: adhan-frontend
+#     spec:
+#       containers:
+#       - name: frontend
+#         image: youruser/adhan-api-frontend:latest
+#         ports:
+#         - containerPort: 3000
