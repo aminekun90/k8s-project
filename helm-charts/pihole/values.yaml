@@ -13,7 +13,9 @@ config:
   webserver:
     serve_all: true      # CRITICAL: Fixes the 404 behind Ingress
     domain: "pi.hole"
-
+extraEnv:
+  - name: FTLCONF_webserver_serve_all
+    value: "true"
 # Ingress Configuration
 ingress:
   enabled: false
