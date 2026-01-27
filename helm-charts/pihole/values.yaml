@@ -43,16 +43,15 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    # Important: Let Nginx handle the header pass-through
-    nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    # v6 works better without the app-root redirect annotation
+    # Force Nginx to tell the Pod its name is pi.hole
+    nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
   hosts:
     - host: pi.hole
       paths:
         - path: /
           pathType: Prefix
-  tls:
-    - secretName: pihole-tls-secret
-      hosts:
-        - pi.hole
+  # tls:
+  #   - secretName: pihole-tls-secret
+  #     hosts:
+  #       - pi.hole
