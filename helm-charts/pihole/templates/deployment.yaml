@@ -15,13 +15,14 @@ spec:
       labels:
         {{- include "pihole.selectorLabels" . | nindent 8 }}
     spec:
-      # SWITCHED TO FALSE so Ingress can manage the traffic
-      hostNetwork: false
-      dnsPolicy: ClusterFirst
+      # Use the node's network stack directly
+      hostNetwork: {{ .Values.hostNetwork }}
+      # Required so the pod can still resolve Kubernetes internal services
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: pihole
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        # Re-adding internal ports so the Service/Ingress can find the container
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
           - name: http
             containerPort: 80
@@ -39,14 +40,23 @@ spec:
           value: {{ .Values.adminPassword | quote }}
         - name: VIRTUAL_HOST
           value: "pi.hole"
+        # Pi-hole v6 Specific Configurations
         - name: FTLCONF_webserver_api_allowedHosts
           value: "*"
+        - name: FTLCONF_webserver_servername
+          value: "pi.hole"
+        - name: FTLCONF_dns_override_pihole_address
+          value: "192.168.1.42"
+        # Optional: Prevents redirection issues when behind an Ingress
+        - name: FTLCONF_webserver_api_trustedProxies
+          value: "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24"
         volumeMounts:
         - name: pihole-data
           mountPath: /etc/pihole
         - name: dnsmasq-data
           mountPath: /etc/dnsmasq.d
         securityContext:
+          privileged: true # Required for some hostNetwork operations on RPi
           capabilities:
             add: ["NET_ADMIN", "SYS_NICE", "CHOWN"]
       volumes:

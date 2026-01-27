@@ -8,18 +8,22 @@ image:
 timezone: "Europe/London"
 adminPassword: "correct horse battery staple"
 
-hostNetwork: false
+# Enable direct node network access
+hostNetwork: true
 
 extraEnv:
   # v6: Essential for Web/API access through Ingress
   FTLCONF_webserver_api_allowedHosts: "*"
   FTLCONF_webserver_servername: "pi.hole"
   FTLCONF_webserver_api_trustedProxies: "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24"
+  
   # v6: Ensure the API is enabled for the dashboard
   FTLCONF_webserver_api_enabled: "true"
+  
+  # v6: FIX THE 10.42.x.x issue - Forces DNS to point to the Pi's real IP
+  FTLCONF_dns_override_pihole_address: "192.168.1.42"
   FTLCONF_dns_hostRecord: "false"
 
-# As requested for network/time management
 securityContext:
   capabilities:
     add:
@@ -35,6 +39,7 @@ persistence:
     size: 1Gi
 
 service:
+  type: ClusterIP
   dnsUdpPort: 53
   dnsTcpPort: 53
   webPort: 80 
@@ -44,8 +49,10 @@ ingress:
   enabled: true
   className: nginx
   annotations:
+    # Disable SSL redirect to avoid the 308 loop we saw earlier
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    # Ensure Nginx passes the correct header to the Pi-hole Pod
     nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   hosts:
@@ -53,7 +60,3 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-  # tls:
-  #   - secretName: pihole-tls-secret
-  #     hosts:
-  #       - pi.hole
