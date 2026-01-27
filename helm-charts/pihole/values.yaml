@@ -39,4 +39,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-  tls: []
+  tls:
+    - secretName: pihole-tls-secret
+      hosts:
+        - pi.hole
