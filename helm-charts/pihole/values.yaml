@@ -8,14 +8,12 @@ image:
 timezone: "Europe/London"
 adminPassword: "correct horse battery staple"
 
-# CHANGED TO FALSE: Let Ingress handle the web traffic
 hostNetwork: false
 
-# Pi-hole v6 specific: Allow the pi.hole hostname
 extraEnv:
-  # This is the "Nuclear" option for Pi-hole v6 security
+  # v6: Allow all hostnames (fixes the black 404)
   FTLCONF_webserver_api_allowedHosts: "*"
-  # This ensures it knows it's behind a proxy
+  # v6: Tell it to trust the Ingress network
   FTLCONF_webserver_api_trustedProxies: "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24"
 
 persistence:
@@ -28,15 +26,17 @@ persistence:
 service:
   dnsUdpPort: 30053
   dnsTcpPort: 30054
-  webPort: 80 # Internal container port
+  webPort: 80 
   httpsPort: 443
 
 ingress:
   enabled: true
   className: nginx
   annotations:
-    # This helps with the Pi-hole v6 admin pathing
+    # Forces any root request to go straight to /admin
     nginx.ingress.kubernetes.io/app-root: /admin
+    # Important for v6 API stability
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
   hosts:
     - host: pi.hole
       paths:
