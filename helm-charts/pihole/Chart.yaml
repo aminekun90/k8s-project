@@ -1,6 +1,6 @@
 apiVersion: v2
 name: pihole
-description: A Helm chart for Pi-hole
+description: A Helm chart for Pi-hole ad-blocker
 type: application
 version: 0.1.0
-appVersion: "5.13.2" # Pi-hole version
+appVersion: "2025.1"

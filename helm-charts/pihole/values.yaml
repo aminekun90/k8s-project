@@ -5,36 +5,21 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
-namespace: pihole
+timezone: "Europe/London"
+adminPassword: "correct horse battery staple"
 
-webPassword: "correct horse battery staple"
-
+# Use hostNetwork if you want to bind to the Pi's actual IP
 hostNetwork: true
 
 persistence:
-  enabled: true
-  piholeStorage: 2Gi
-  dnsmasqStorage: 1Gi
-
-dns:
-  upstreamServers:
-    - 1.1.1.1
-    - 8.8.8.8
+  storageClass: "local-path"
+  pihole:
+    size: 2Gi
+  dnsmasq:
+    size: 1Gi
 
 service:
-  type: ClusterIP
-  ports:
-    - name: dns
-      protocol: UDP
-      port: 53
-    - name: dns-tcp
-      protocol: TCP
-      port: 53
-    - name: http
-      protocol: TCP
-      port: 80
-    - name: https
-      protocol: TCP
-      port: 443
-
-timezone: "Europe/London"
+  dnsUdpPort: 30053
+  dnsTcpPort: 30054
+  webPort: 30080
+  httpsPort: 30443
