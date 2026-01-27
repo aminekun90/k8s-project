@@ -11,11 +11,9 @@ adminPassword: "correct horse battery staple"
 hostNetwork: true
 
 extraEnv:
-  FTLCONF_dns_listeningMode: "all"
+  FTLCONF_dns_listeningMode: "ALL"
   FTLCONF_dns_hostRecord: "false"
   FTLCONF_webserver_serve_all: "true"
-  # Corrected nesting for v6.4.1
-  FTLCONF_webserver_trustedProxies: '["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]'
 
 securityContext:
   privileged: true
