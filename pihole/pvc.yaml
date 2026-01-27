@@ -4,6 +4,7 @@ metadata:
   name: pihole-pvc
   namespace: pihole
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
@@ -17,6 +18,7 @@ metadata:
   name: dnsmasq-pvc
   namespace: pihole
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
