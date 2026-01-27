@@ -11,13 +11,11 @@ adminPassword: "correct horse battery staple"
 hostNetwork: true
 
 extraEnv:
-  # Use the exact keys the log recognized as valid
   FTLCONF_dns_listeningMode: "all"
   FTLCONF_dns_hostRecord: "false"
   FTLCONF_webserver_serve_all: "true"
-  
-  # The log rejected 'api_trustedProxies'. v6.4 often uses the flat structure:
-  FTLCONF_webserver_trustedProxies: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+  # Corrected nesting for v6.4.1
+  FTLCONF_webserver_trustedProxies: '["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]'
 
 securityContext:
   privileged: true
