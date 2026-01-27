@@ -17,6 +17,7 @@ extraEnv:
   FTLCONF_webserver_api_trustedProxies: "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24"
   # v6: Ensure the API is enabled for the dashboard
   FTLCONF_webserver_api_enabled: "true"
+  FTLCONF_dns_hostRecord: "false"
 
 # As requested for network/time management
 securityContext:
