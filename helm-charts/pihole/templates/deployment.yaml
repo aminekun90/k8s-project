@@ -3,12 +3,10 @@ kind: Deployment
 metadata:
   name: {{ include "pihole.fullname" . }}
   namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "pihole.labels" . | nindent 4 }}
 spec:
   strategy:
     type: Recreate
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "pihole.selectorLabels" . | nindent 6 }}
@@ -17,12 +15,11 @@ spec:
       labels:
         {{- include "pihole.selectorLabels" . | nindent 8 }}
     spec:
-      hostNetwork: {{ .Values.hostNetwork }}
-      dnsPolicy: {{ if .Values.hostNetwork }}ClusterFirstWithHostNet{{ else }}ClusterFirst{{ end }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: pihole
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: TZ
           value: {{ .Values.timezone | quote }}
@@ -30,16 +27,7 @@ spec:
           value: {{ .Values.adminPassword | quote }}
         - name: FTLCONF_dns_listeningMode
           value: "all"
-        ports:
-        - name: dns-udp
-          containerPort: 53
-          protocol: UDP
-        - name: dns-tcp
-          containerPort: 53
-          protocol: TCP
-        - name: http
-          containerPort: 80
-          protocol: TCP
+        # REMOVED the ports: section here to stop the Scheduler from blocking
         volumeMounts:
         - name: pihole-data
           mountPath: /etc/pihole
