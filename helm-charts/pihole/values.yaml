@@ -16,7 +16,7 @@ config:
 
 # Ingress Configuration
 ingress:
-  enabled: true
+  enabled: false
   ingressClassName: nginx
   path: /
   pathType: Prefix
