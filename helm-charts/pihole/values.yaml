@@ -12,13 +12,13 @@ adminPassword: "correct horse battery staple"
 hostNetwork: true
 
 extraEnv:
-  # v6.4 Syntax: Fixes 404 by accepting all Host headers from Ingress
-  FTLCONF_webserver_serve_all: "true"
-  # Allows API access from your local network ranges
-  FTLCONF_webserver_trustedProxies: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-  # DNS engine settings
+  # V6.4.1 Corrected Syntax
   FTLCONF_dns_listeningMode: "all"
   FTLCONF_dns_hostRecord: "false"
+  FTLCONF_webserver_serve_all: "true"
+
+  # Fix for 'unknown' trustedProxies (v6.4 uses underscores for the nested keys)
+  FTLCONF_webserver_api_trustedProxies: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 
 securityContext:
   privileged: true
