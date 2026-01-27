@@ -8,28 +8,32 @@ image:
 timezone: "Europe/London"
 adminPassword: "correct horse battery staple"
 
-# Enable direct node network access
+# Use the node's network (essential for RPi without MetalLB)
 hostNetwork: true
 
+# The MoJo2600 chart uses extraEnv for v6 engine configuration
 extraEnv:
-  # v6: Essential for Web/API access through Ingress
+  # V6 ENGINE SETTINGS
+  FTLCONF_webserver_api_enabled: "true"
   FTLCONF_webserver_api_allowedHosts: "*"
   FTLCONF_webserver_servername: "pi.hole"
-  FTLCONF_webserver_api_trustedProxies: "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24"
   
-  # v6: Ensure the API is enabled for the dashboard
-  FTLCONF_webserver_api_enabled: "true"
+  # TRUSTED PROXIES: Dynamic range for K8s internal networking
+  FTLCONF_webserver_api_trustedProxies: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
   
-  # v6: FIX THE 10.42.x.x issue - Forces DNS to point to the Pi's real IP
-  FTLCONF_dns_override_pihole_address: "192.168.1.42"
+  # DNS SETTINGS: Prevent internal pod IP from leaking into DNS
   FTLCONF_dns_hostRecord: "false"
+  FTLCONF_dns_listeningMode: "all"
 
+# Required for RPi hardware access and network management
 securityContext:
+  privileged: true
   capabilities:
     add:
       - NET_ADMIN
       - SYS_TIME
       - SYS_NICE
+      - CHOWN
 
 persistence:
   storageClass: "local-path"
@@ -49,10 +53,10 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    # Disable SSL redirect to avoid the 308 loop we saw earlier
+    # Disable SSL redirect to prevent 308 loops
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
-    # Ensure Nginx passes the correct header to the Pi-hole Pod
+    # Ensure Ingress tells Pi-hole it's looking for "pi.hole"
     nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   hosts:
