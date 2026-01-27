@@ -15,19 +15,32 @@ spec:
       labels:
         {{- include "pihole.selectorLabels" . | nindent 8 }}
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      # SWITCHED TO FALSE so Ingress can manage the traffic
+      hostNetwork: false
+      dnsPolicy: ClusterFirst
       containers:
       - name: pihole
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        # Re-adding internal ports so the Service/Ingress can find the container
+        ports:
+          - name: http
+            containerPort: 80
+            protocol: TCP
+          - name: dns-udp
+            containerPort: 53
+            protocol: UDP
+          - name: dns-tcp
+            containerPort: 53
+            protocol: TCP
         env:
         - name: TZ
           value: {{ .Values.timezone | quote }}
         - name: WEBPASSWORD
           value: {{ .Values.adminPassword | quote }}
-        - name: FTLCONF_dns_listeningMode
-          value: "all"
-        # REMOVED the ports: section here to stop the Scheduler from blocking
+        - name: VIRTUAL_HOST
+          value: "pi.hole"
+        - name: FTLCONF_webserver_api_allowedHosts
+          value: "*"
         volumeMounts:
         - name: pihole-data
           mountPath: /etc/pihole

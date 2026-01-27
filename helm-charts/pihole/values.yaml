@@ -8,8 +8,12 @@ image:
 timezone: "Europe/London"
 adminPassword: "correct horse battery staple"
 
-# Use hostNetwork if you want to bind to the Pi's actual IP
-hostNetwork: true
+# CHANGED TO FALSE: Let Ingress handle the web traffic
+hostNetwork: false
+
+# Pi-hole v6 specific: Allow the pi.hole hostname
+extraEnv:
+  FTLCONF_webserver_api_allowedHosts: "*"
 
 persistence:
   storageClass: "local-path"
@@ -21,5 +25,18 @@ persistence:
 service:
   dnsUdpPort: 30053
   dnsTcpPort: 30054
-  webPort: 30080
-  httpsPort: 30443
+  webPort: 80 # Internal container port
+  httpsPort: 443
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # This helps with the Pi-hole v6 admin pathing
+    nginx.ingress.kubernetes.io/app-root: /admin
+  hosts:
+    - host: pi.hole
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
