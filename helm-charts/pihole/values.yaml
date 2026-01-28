@@ -11,10 +11,12 @@ adminPassword: "CHANGE_ME_NOW"
 service:
   dns:
     type: LoadBalancer
-    loadBalancerIP: 192.168.1.43
+    loadBalancerIP: 192.168.1.43  # make sure it's free
+    port: 53                       # DNS port
   web:
     type: LoadBalancer
-    loadBalancerIP: 192.168.1.44
+    loadBalancerIP: 192.168.1.44  # make sure it's free
+    port: 80                       # HTTP port
 
 persistence:
   enabled: true
