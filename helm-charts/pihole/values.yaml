@@ -4,35 +4,17 @@ timezone: "Europe/Paris"
 # Network Configuration
 hostNetwork: true
 
-# The MoJo2600 v6 Configuration Block
-config:
-  dns:
-    listeningMode: "ALL"
-    piholePTR: "PI.HOLE"
-    hostRecord: "false"  # CRITICAL: Stops the 'Bad host-record' error
-  webserver:
-    serve_all: true      # CRITICAL: Fixes the 404 behind Ingress
-    domain: "pi.hole"
-extraEnv:
-  - name: FTLCONF_webserver_serve_all
-    value: "true"
-# Ingress Configuration
+# Ingress Configuration (Disabled to use hostNetwork)
 ingress:
   enabled: false
-  ingressClassName: nginx
-  path: /
-  pathType: Prefix
-  hosts:
-    - pi.hole
-  annotations:
-    nginx.ingress.kubernetes.io/upstream-vhost: "pi.hole"
 
-# Persistence (Adjust StorageClass to yours, e.g., glusterfs-storage)
+# Persistence (Only for /etc/pihole)
 persistentVolumeClaim:
   enabled: true
   storageClass: "local-path"
+  size: 500Mi
 
-# Your Lists from GitHub
+# Lists
 adlists:
   - https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt
   - https://v.firebog.net/hosts/static/w3kbl.txt
