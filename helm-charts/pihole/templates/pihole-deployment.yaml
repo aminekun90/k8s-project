@@ -28,6 +28,8 @@ spec:
               value: {{ .Values.timezone }}
             - name: FTLCONF_webserver_api_password
               value: {{ .Values.adminPassword }}
+            - name: ServerIP
+              value: "{{ .Values.service.web.loadBalancerIP }}"
             - name: DNS1
               value: "unbound.pihole.svc.cluster.local#{{ .Values.unbound.port }}"
             - name: DNS2
