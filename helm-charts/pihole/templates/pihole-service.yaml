@@ -1,11 +1,12 @@
-# templates/pihole-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: pihole
+  name: pihole-dns
 spec:
   type: {{ .Values.service.dns.type }}
+  {{- if .Values.service.dns.loadBalancerIP }}
   loadBalancerIP: {{ .Values.service.dns.loadBalancerIP }}
+  {{- end }}
   selector:
     app: pihole
   ports:
@@ -15,6 +16,19 @@ spec:
     - name: dns-tcp
       port: 53
       protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-web
+spec:
+  type: {{ .Values.service.web.type }}
+  selector:
+    app: pihole
+  ports:
     - name: web
       port: {{ .Values.service.web.port }}
       targetPort: 80
+      {{- if eq .Values.service.web.type "NodePort" }}
+      nodePort: {{ .Values.service.web.nodePort }}
+      {{- end }}

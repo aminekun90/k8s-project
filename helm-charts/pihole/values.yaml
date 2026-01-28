@@ -10,11 +10,12 @@ adminPassword: "CHANGE_ME_NOW"
 
 service:
   dns:
-    type: LoadBalancer
+    type: LoadBalancer   # or NodePort if you prefer
     loadBalancerIP: 192.168.1.100
   web:
-    type: ClusterIP
+    type: NodePort
     port: 80
+    nodePort: 30080
 
 persistence:
   enabled: true
