@@ -1,14 +1,11 @@
-# helm-charts/pihole/values.yaml
-
 replicaCount: 1
 
 image:
   repository: pihole/pihole
-  tag: latest
+  tag: "2025.11.1"
   pullPolicy: IfNotPresent
 
 timezone: Europe/Paris
-
 adminPassword: "CHANGE_ME_NOW"
 
 service:

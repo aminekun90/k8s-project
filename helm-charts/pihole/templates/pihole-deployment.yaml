@@ -28,8 +28,10 @@ spec:
               value: {{ .Values.timezone }}
             - name: WEBPASSWORD
               value: {{ .Values.adminPassword }}
-            - name: PIHOLE_DNS_
+            - name: DNS1
               value: "unbound.pihole.svc.cluster.local#{{ .Values.unbound.port }}"
+            - name: DNS2
+              value: "no"
             - name: DNSMASQ_LISTENING
               value: "all"
           volumeMounts:
