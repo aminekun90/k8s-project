@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adhan-api
+  namespace: adhan
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: adhan-api
+  template:
+    metadata:
+      labels:
+        app: adhan-api
+    spec:
+      hostNetwork: {{ .Values.hostNetwork }}
+      containers:
+        - name: adhan-api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/src/data
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: timezone
+              mountPath: /etc/timezone
+              readOnly: true
+      volumes:
+        - name: data
+          hostPath:
+            path: {{ .Values.dataPath }}
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: timezone
+          hostPath:
+            path: /etc/timezone

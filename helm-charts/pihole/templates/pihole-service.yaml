@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -32,3 +33,9 @@ spec:
       {{- if eq .Values.service.web.type "NodePort" }}
       nodePort: {{ .Values.service.web.nodePort }}
       {{- end }}
+  {{- if .Values.service.web.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.web.externalTrafficPolicy }}
+  {{- end }}
+  {{- if .Values.service.web.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.web.loadBalancerIP }}
+  {{- end }}

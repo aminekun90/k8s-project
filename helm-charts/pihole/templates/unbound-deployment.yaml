@@ -1,10 +1,10 @@
-# templates/unbound-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: unbound
+  namespace: pihole
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
       app: unbound
@@ -18,12 +18,19 @@ spec:
           image: {{ .Values.unbound.image }}
           ports:
             - containerPort: {{ .Values.unbound.port }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              wget -O /opt/unbound/etc/unbound/root.hints https://www.internic.net/domain/named.root
+              exec unbound -d -c /opt/unbound/etc/unbound/unbound.conf
           volumeMounts:
-            - name: config
-              mountPath: /opt/unbound/etc/unbound
+            - name: unbound-config
+              mountPath: /opt/unbound/etc/unbound/unbound.conf
+              subPath: unbound.conf
           resources:
 {{ toYaml .Values.resources.unbound | indent 12 }}
       volumes:
-        - name: config
+        - name: unbound-config
           configMap:
             name: unbound-config

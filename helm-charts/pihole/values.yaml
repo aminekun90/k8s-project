@@ -9,14 +9,19 @@ timezone: Europe/Paris
 adminPassword: "CHANGE_ME_NOW"
 
 service:
-  dns:
-    type: LoadBalancer
-    loadBalancerIP: null  # to be set automatically
-    port: 53
   web:
     type: LoadBalancer
-    loadBalancerIP: 192.168.1.42  # make sure it's free
-    port: 80                       # HTTP port
+    loadBalancerIP: 192.168.1.42
+    port: 80
+  dns:
+    type: LoadBalancer
+    loadBalancerIP: 192.168.1.44
+    port: 53
+
+pihole:
+  dns:
+    custom:
+      - unbound.pihole.svc.cluster.local#5335
 
 persistence:
   enabled: true

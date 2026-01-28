@@ -1,0 +1,15 @@
+replicaCount: 1
+
+image:
+  repository: aminekun90/adhan-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+hostNetwork: true
+
+dataPath: /home/pi/data
+
+service:
+  type: LoadBalancer
+  port: 8000
+  # loadBalancerIP: 192.168.1.41
