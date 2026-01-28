@@ -1,23 +1,41 @@
-adminPassword: "pihole"
-timezone: "Europe/Paris"
+# helm-charts/pihole/values.yaml
 
-# Network Configuration
-hostNetwork: true
+replicaCount: 1
 
-# Ingress Configuration (Disabled to use hostNetwork)
-ingress:
-  enabled: false
+image:
+  repository: pihole/pihole
+  tag: latest
+  pullPolicy: IfNotPresent
 
-# Persistence (Only for /etc/pihole)
-persistentVolumeClaim:
+timezone: Europe/Paris
+
+adminPassword: "CHANGE_ME_NOW"
+
+service:
+  dns:
+    type: LoadBalancer
+    loadBalancerIP: 192.168.1.100
+  web:
+    type: ClusterIP
+    port: 80
+
+persistence:
   enabled: true
-  storageClass: "local-path"
-  size: 500Mi
+  storageClass: longhorn
+  size: 2Gi
 
-# Lists
-adlists:
-  - https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt
-  - https://v.firebog.net/hosts/static/w3kbl.txt
-whitelist:
-  - github.com
-  - googleapis.com
+resources:
+  pihole:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  unbound:
+    requests:
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+unbound:
+  image: mvance/unbound:1.20.0
+  port: 5335

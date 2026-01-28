@@ -1,0 +1,29 @@
+# templates/unbound-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unbound
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: unbound
+  template:
+    metadata:
+      labels:
+        app: unbound
+    spec:
+      containers:
+        - name: unbound
+          image: {{ .Values.unbound.image }}
+          ports:
+            - containerPort: {{ .Values.unbound.port }}
+          volumeMounts:
+            - name: config
+              mountPath: /opt/unbound/etc/unbound
+          resources:
+{{ toYaml .Values.resources.unbound | indent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: unbound-config

@@ -1,0 +1,12 @@
+# templates/unbound-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: unbound
+spec:
+  type: ClusterIP
+  selector:
+    app: unbound
+  ports:
+    - port: {{ .Values.unbound.port }}
+      targetPort: {{ .Values.unbound.port }}

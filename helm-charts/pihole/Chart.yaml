@@ -1,6 +1,7 @@
+# helm-charts/pihole/Chart.yaml
 apiVersion: v2
 name: pihole
-description: A Helm chart for Pi-hole ad-blocker
+description: Pi-hole v6.4 with Unbound (recursive DNS)
 type: application
 version: 0.1.0
-appVersion: "2025.1"
+appVersion: "6.4"

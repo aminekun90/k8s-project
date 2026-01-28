@@ -1,0 +1,20 @@
+# templates/pihole-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole
+spec:
+  type: {{ .Values.service.dns.type }}
+  loadBalancerIP: {{ .Values.service.dns.loadBalancerIP }}
+  selector:
+    app: pihole
+  ports:
+    - name: dns-udp
+      port: 53
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+    - name: web
+      port: {{ .Values.service.web.port }}
+      targetPort: 80
