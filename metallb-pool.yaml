@@ -5,7 +5,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-  - 192.168.1.42-192.168.1.42
+  - 192.168.1.42-192.168.1.43  # first IP for DNS, second IP for web UI
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
