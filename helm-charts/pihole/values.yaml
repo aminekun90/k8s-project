@@ -9,13 +9,14 @@ timezone: Europe/Paris
 adminPassword: "CHANGE_ME_NOW"
 
 service:
+  web:
+    type: NodePort
+    port: 80
+    nodePort: 30080
   dns:
     type: LoadBalancer
     loadBalancerIP: 192.168.1.100   # Pi-hole DNS IP
-  web:
-    type: LoadBalancer              # change from NodePort
-    loadBalancerIP: 192.168.1.101  # pick a free IP in your LAN for the web UI
-    port: 80
+
 
 persistence:
   enabled: true
