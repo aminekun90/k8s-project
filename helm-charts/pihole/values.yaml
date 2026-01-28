@@ -11,8 +11,8 @@ adminPassword: "CHANGE_ME_NOW"
 service:
   dns:
     type: LoadBalancer
-    loadBalancerIP: 192.168.1.43  # make sure it's free
-    port: 53                       # DNS port
+    loadBalancerIP: null  # to be set automatically
+    port: 53
   web:
     type: LoadBalancer
     loadBalancerIP: 192.168.1.44  # make sure it's free
