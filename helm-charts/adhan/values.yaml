@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: aminekun90/adhan-api
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 hostNetwork: true
 
