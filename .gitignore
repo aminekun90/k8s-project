@@ -4,7 +4,6 @@
 # Local value overrides that may contain secrets (e.g. --values values.local.yaml)
 *.local.yaml
 secrets.yaml
-.claude/
 
 # Freebox API token cached by scripts/freebox-dns.py
 .fbx_token.json
