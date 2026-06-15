@@ -5,3 +5,9 @@
 *.local.yaml
 secrets.yaml
 .claude/
+
+# Freebox API token cached by scripts/freebox-dns.py
+.fbx_token.json
+scripts/.fbx_token.json
+__pycache__/
+*.pyc
