@@ -25,16 +25,16 @@ spec:
             - containerPort: 80
           env:
             - name: TZ
-              value: {{ .Values.timezone }}
+              value: {{ .Values.timezone | quote }}
             - name: FTLCONF_webserver_api_password
-              value: {{ .Values.adminPassword }}
-            - name: ServerIP
-              value: "{{ .Values.service.web.loadBalancerIP }}"
-            - name: DNS1
-              value: "unbound.pihole.svc.cluster.local#{{ .Values.unbound.port }}"
-            - name: DNS2
-              value: "no"
-            - name: DNSMASQ_LISTENING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret | default (printf "%s-admin" .Release.Name) }}
+                  key: {{ .Values.existingSecretKey }}
+            # Pi-hole v6 config keys (replace the deprecated v5 ServerIP/DNS1/DNS2/DNSMASQ_LISTENING).
+            - name: FTLCONF_dns_upstreams
+              value: {{ .Values.upstreamDns | quote }}
+            - name: FTLCONF_dns_listeningMode
               value: "all"
           volumeMounts:
             - name: data

@@ -2,14 +2,37 @@ replicaCount: 1
 
 image:
   repository: aminekun90/adhan-api
-  tag: latest
-  pullPolicy: Always
+  tag: "0.1.1"
+  pullPolicy: IfNotPresent
 
+# hostNetwork is required for Sonos (SSDP) and Freebox (mDNS) LAN discovery.
 hostNetwork: true
+# When hostNetwork is on, keep cluster DNS working inside the pod.
+dnsPolicy: ClusterFirstWithHostNet
 
+timezone: Europe/Paris
+
+# Persisted app data (prayer DB, Freebox token) on the node.
 dataPath: /home/pi/data
+
+# Mount the host sound card so the "Cet appareil" device plays the adhan
+# on the Pi itself (needs a privileged container). Disable if you only use
+# Sonos / Freebox / Bluetooth.
+audio:
+  enabled: true
+  devicePath: /dev/snd
 
 service:
   type: LoadBalancer
   port: 8000
-  # loadBalancerIP: 192.168.1.41
+  # Optional fixed IP. Must be inside the MetalLB pool (192.168.1.42-44);
+  # leave empty to auto-assign (.42 and .44 are used by Pi-hole, so .43 is free).
+  loadBalancerIP: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 256Mi

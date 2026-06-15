@@ -2,11 +2,24 @@ replicaCount: 1
 
 image:
   repository: pihole/pihole
-  tag: "2025.11.1"
+  tag: "2026.02.0"
   pullPolicy: IfNotPresent
 
 timezone: Europe/Paris
-adminPassword: "CHANGE_ME_NOW"
+
+# Admin password handling (kept out of git, not lost on upgrade).
+# Two options:
+#   A) Reference a Secret you create once (recommended — survives any upgrade):
+#        kubectl -n pihole create secret generic pihole-admin --from-literal=password='YOURPASS'
+#      then set: existingSecret: pihole-admin
+#   B) Let the chart create the Secret from `adminPassword`. Don't commit the
+#      real value — pass it at install time, e.g.:
+#        helm upgrade --install pihole ./helm-charts/pihole -n pihole --set adminPassword='YOURPASS'
+adminPassword: ""
+existingSecret: ""        # name of a pre-created Secret holding the password
+existingSecretKey: password
+# Upstream resolver(s) for Pi-hole v6 (replaces the deprecated DNS1/DNS2 envs).
+upstreamDns: unbound.pihole.svc.cluster.local#5335
 
 service:
   web:
@@ -18,11 +31,6 @@ service:
     type: LoadBalancer
     loadBalancerIP: 192.168.1.44
     port: 53
-
-pihole:
-  dns:
-    custom:
-      - unbound.pihole.svc.cluster.local#5335
 
 persistence:
   enabled: true

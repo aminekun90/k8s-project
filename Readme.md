@@ -20,7 +20,8 @@ This project deploys a **Pi-hole + Unbound DNS** stack and an **Adhan API** on a
 │       ├── templates
 │       │   ├── _helpers.tpl
 │       │   ├── pihole-deployment.yaml
-│       │   ├── pihole-pvc.yaml.yaml
+│       │   ├── pihole-pvc.yaml
+│       │   ├── pihole-secret.yaml
 │       │   ├── pihole-service.yaml
 │       │   ├── unbound-configmap.yaml
 │       │   ├── unbound-deployment.yaml
@@ -66,8 +67,15 @@ kubectl apply -f namespaces/adhan-namespace.yaml
 
 ## Step 3: Deploy Pi-hole + Unbound
 
+The admin password is stored in a Kubernetes Secret (never in git). Pick one:
+
 ```bash
-helm install pihole helm-charts/pihole -n pihole
+# Recommended — create the Secret once; it survives every helm upgrade:
+kubectl -n pihole create secret generic pihole-admin --from-literal=password='YOURPASS'
+helm upgrade --install pihole helm-charts/pihole -n pihole --set existingSecret=pihole-admin
+
+# Or let the chart create the Secret (pass the password at install time):
+helm upgrade --install pihole helm-charts/pihole -n pihole --set adminPassword='YOURPASS'
 ```
 
 Check pods and services:
