@@ -21,6 +21,19 @@ existingSecretKey: password
 # Upstream resolver(s) for Pi-hole v6 (replaces the deprecated DNS1/DNS2 envs).
 upstreamDns: unbound.pihole.svc.cluster.local#5335
 
+# Optional: let Pi-hole be the LAN DHCP server. This is the universal way to
+# push Pi-hole as DNS to every device when the router/ISP box can't set a
+# custom DNS (works behind any FAI/router worldwide).
+# IMPORTANT: disable the router's own DHCP first, and note this forces
+# hostNetwork on the Pi-hole pod (it must see L2 DHCP broadcasts).
+dhcp:
+  enabled: false
+  start: 192.168.1.100      # first IP to hand out
+  end: 192.168.1.200        # last IP to hand out
+  router: 192.168.1.254     # the gateway (your ISP box)
+  leaseTime: 24h
+  ipv6: "false"
+
 service:
   web:
     type: LoadBalancer

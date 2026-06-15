@@ -13,6 +13,11 @@ spec:
       labels:
         app: pihole
     spec:
+      {{- if .Values.dhcp.enabled }}
+      # DHCP serves clients directly via L2 broadcast, which needs host network.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
       containers:
         - name: pihole
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -23,6 +28,10 @@ spec:
             - containerPort: 53
               protocol: TCP
             - containerPort: 80
+            {{- if .Values.dhcp.enabled }}
+            - containerPort: 67
+              protocol: UDP
+            {{- end }}
           env:
             - name: TZ
               value: {{ .Values.timezone | quote }}
@@ -36,6 +45,23 @@ spec:
               value: {{ .Values.upstreamDns | quote }}
             - name: FTLCONF_dns_listeningMode
               value: "all"
+            {{- if .Values.dhcp.enabled }}
+            # Built-in DHCP server — the universal way to push Pi-hole as DNS to
+            # every device when the router/ISP box can't set a custom DNS.
+            # Disable the router's own DHCP first to avoid two DHCP servers.
+            - name: FTLCONF_dhcp_active
+              value: "true"
+            - name: FTLCONF_dhcp_start
+              value: {{ .Values.dhcp.start | quote }}
+            - name: FTLCONF_dhcp_end
+              value: {{ .Values.dhcp.end | quote }}
+            - name: FTLCONF_dhcp_router
+              value: {{ .Values.dhcp.router | quote }}
+            - name: FTLCONF_dhcp_leaseTime
+              value: {{ .Values.dhcp.leaseTime | quote }}
+            - name: FTLCONF_dhcp_ipv6
+              value: {{ .Values.dhcp.ipv6 | quote }}
+            {{- end }}
           volumeMounts:
             - name: data
               mountPath: /etc/pihole

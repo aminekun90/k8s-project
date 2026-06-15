@@ -183,15 +183,27 @@ FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh   # also point the Freebox DHCP at Pi-ho
 It applies the namespaces + MetalLB pool, creates/reuses the Pi-hole admin
 Secret, `helm upgrade --install`s both charts, and applies the ingress.
 
-## Make the whole LAN use Pi-hole (Freebox Pop)
+## Make the whole LAN use Pi-hole (any ISP, worldwide)
 
-See **[docs/freebox-pop.md](docs/freebox-pop.md)**. In short, point the Freebox
-DHCP DNS at the Pi-hole IP — automated:
+See **[docs/dns-setup.md](docs/dns-setup.md)** — covers French ISPs (Free,
+Orange, Bouygues, SFR), generic routers worldwide, and a universal **Pi-hole
+DHCP** fallback for boxes that won't let you set a custom DNS.
+
+Freebox is automated via the local API:
 
 ```bash
 python3 scripts/freebox-dns.py --dns 192.168.1.42   # press the Freebox arrow once
 python3 scripts/freebox-dns.py --show                # check current DHCP DNS
 python3 scripts/freebox-dns.py --revert              # hand DNS back to the Freebox
+```
+
+For other ISPs/routers, either set the DHCP DNS in the box UI, or enable
+Pi-hole's own DHCP server:
+
+```bash
+helm upgrade --install pihole helm-charts/pihole -n pihole \
+  --set existingSecret=pihole-admin --set dhcp.enabled=true \
+  --set dhcp.router=192.168.1.254   # disable the router's DHCP first
 ```
 
 ---
