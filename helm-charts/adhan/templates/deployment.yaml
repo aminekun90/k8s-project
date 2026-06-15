@@ -29,9 +29,9 @@ spec:
           env:
             - name: TZ
               value: {{ .Values.timezone | quote }}
-          {{- if .Values.audio.enabled }}
+          {{- if or .Values.audio.enabled .Values.bluetooth.enabled }}
           securityContext:
-            privileged: true  # required to access the host ALSA sound device
+            privileged: true  # access the host ALSA device / Bluetooth D-Bus
           {{- end }}
           # Migrations run on startup; startupProbe gives them time before
           # liveness kicks in.
@@ -66,6 +66,10 @@ spec:
             - name: snd
               mountPath: /dev/snd
             {{- end }}
+            {{- if .Values.bluetooth.enabled }}
+            - name: dbus
+              mountPath: /var/run/dbus
+            {{- end }}
       volumes:
         - name: data
           hostPath:
@@ -81,4 +85,9 @@ spec:
         - name: snd
           hostPath:
             path: {{ .Values.audio.devicePath }}
+        {{- end }}
+        {{- if .Values.bluetooth.enabled }}
+        - name: dbus
+          hostPath:
+            path: {{ .Values.bluetooth.dbusPath }}
         {{- end }}
