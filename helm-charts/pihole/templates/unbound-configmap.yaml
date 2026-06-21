@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: unbound-config
-  namespace: pihole
+  namespace: {{ .Release.Namespace }}
 data:
   unbound.conf: |
     server:

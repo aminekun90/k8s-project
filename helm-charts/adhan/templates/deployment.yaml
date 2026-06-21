@@ -2,7 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: adhan-api
-  namespace: adhan
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: adhan-api
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -14,10 +16,47 @@ spec:
         app: adhan-api
     spec:
       hostNetwork: {{ .Values.hostNetwork }}
+      {{- if .Values.hostNetwork }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: adhan-api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
+          {{- if or .Values.audio.enabled .Values.bluetooth.enabled }}
+          securityContext:
+            privileged: true  # access the host ALSA device / Bluetooth D-Bus
+          {{- end }}
+          # Migrations run on startup; startupProbe gives them time before
+          # liveness kicks in.
+          startupProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: data
               mountPath: /app/src/data
@@ -27,13 +66,32 @@ spec:
             - name: timezone
               mountPath: /etc/timezone
               readOnly: true
+            {{- if .Values.audio.enabled }}
+            - name: snd
+              mountPath: /dev/snd
+            {{- end }}
+            {{- if .Values.bluetooth.enabled }}
+            - name: dbus
+              mountPath: /var/run/dbus
+            {{- end }}
       volumes:
         - name: data
           hostPath:
             path: {{ .Values.dataPath }}
+            type: DirectoryOrCreate
         - name: localtime
           hostPath:
             path: /etc/localtime
         - name: timezone
           hostPath:
             path: /etc/timezone
+        {{- if .Values.audio.enabled }}
+        - name: snd
+          hostPath:
+            path: {{ .Values.audio.devicePath }}
+        {{- end }}
+        {{- if .Values.bluetooth.enabled }}
+        - name: dbus
+          hostPath:
+            path: {{ .Values.bluetooth.dbusPath }}
+        {{- end }}

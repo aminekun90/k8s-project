@@ -2,14 +2,54 @@ replicaCount: 1
 
 image:
   repository: aminekun90/adhan-api
-  tag: latest
-  pullPolicy: Always
+  tag: "0.1.1"
+  pullPolicy: IfNotPresent
 
+# hostNetwork is required for Sonos (SSDP) and Freebox (mDNS) LAN discovery.
 hostNetwork: true
+# When hostNetwork is on, keep cluster DNS working inside the pod.
+dnsPolicy: ClusterFirstWithHostNet
 
+timezone: Europe/Paris
+
+# Pin the pod to the Pi that physically has the speakers/sound card, the
+# Bluetooth adapter, and the node-local data hostPath below. Required on any
+# multi-node cluster (otherwise the pod can schedule on a node without the
+# audio hardware, off the speakers' LAN segment, or away from its data);
+# harmless on a single-node cluster. Example:
+#   nodeSelector: { kubernetes.io/hostname: raspberrypi }
+nodeSelector: {}
+
+# Persisted app data (prayer DB, Freebox token) on the node. Node-local
+# hostPath: it only survives reschedules onto the SAME node, so set
+# nodeSelector above to keep the pod (and its data) on one Pi.
 dataPath: /home/pi/data
+
+# Mount the host sound card so the "Cet appareil" device plays the adhan
+# on the Pi itself (needs a privileged container). Disable if you only use
+# Sonos / Freebox / Bluetooth.
+audio:
+  enabled: true
+  devicePath: /dev/snd
+
+# Bluetooth speakers: the container's bluetoothctl drives the HOST's bluetoothd
+# over the system D-Bus. Requires a BT adapter + bluetoothd running on the Pi.
+# Implies a privileged container (already set when audio is enabled).
+bluetooth:
+  enabled: false
+  dbusPath: /var/run/dbus
 
 service:
   type: LoadBalancer
   port: 8000
-  # loadBalancerIP: 192.168.1.41
+  # Optional fixed IP. Must be inside the MetalLB pool (192.168.1.42-44);
+  # leave empty to auto-assign (.42 and .44 are used by Pi-hole, so .43 is free).
+  loadBalancerIP: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 256Mi

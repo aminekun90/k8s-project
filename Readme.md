@@ -20,7 +20,8 @@ This project deploys a **Pi-hole + Unbound DNS** stack and an **Adhan API** on a
 │       ├── templates
 │       │   ├── _helpers.tpl
 │       │   ├── pihole-deployment.yaml
-│       │   ├── pihole-pvc.yaml.yaml
+│       │   ├── pihole-pvc.yaml
+│       │   ├── pihole-secret.yaml
 │       │   ├── pihole-service.yaml
 │       │   ├── unbound-configmap.yaml
 │       │   ├── unbound-deployment.yaml
@@ -66,8 +67,15 @@ kubectl apply -f namespaces/adhan-namespace.yaml
 
 ## Step 3: Deploy Pi-hole + Unbound
 
+The admin password is stored in a Kubernetes Secret (never in git). Pick one:
+
 ```bash
-helm install pihole helm-charts/pihole -n pihole
+# Recommended — create the Secret once; it survives every helm upgrade:
+kubectl -n pihole create secret generic pihole-admin --from-literal=password='YOURPASS'
+helm upgrade --install pihole helm-charts/pihole -n pihole --set existingSecret=pihole-admin
+
+# Or let the chart create the Secret (pass the password at install time):
+helm upgrade --install pihole helm-charts/pihole -n pihole --set adminPassword='YOURPASS'
 ```
 
 Check pods and services:
@@ -162,35 +170,40 @@ helm upgrade adhan helm-charts/adhan -n adhan
 
 ---
 
-## Step 7: Optional Shell Scripts
+## One-shot deploy
 
-You can create `deploy.sh` to deploy everything quickly:
+Everything above is wrapped in **`deploy.sh`** (idempotent — safe to re-run):
 
 ```bash
-#!/bin/bash
-set -e
-
-echo "Creating namespaces..."
-kubectl apply -f namespaces/pihole-namespace.yaml
-kubectl apply -f namespaces/adhan-namespace.yaml
-
-echo "Deploying MetalLB..."
-kubectl apply -f metallb-pool.yaml
-
-echo "Deploying Pi-hole + Unbound..."
-helm upgrade --install pihole helm-charts/pihole -n pihole
-
-echo "Deploying Adhan API..."
-helm upgrade --install adhan helm-charts/adhan -n adhan
-
-echo "Done! Use 'kubectl get pods -n <namespace>' to check status."
+./deploy.sh                          # prompts for the Pi-hole password (first run)
+PIHOLE_PASSWORD=secret ./deploy.sh   # non-interactive
+FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh   # also point the Freebox DHCP at Pi-hole
 ```
 
-Make executable:
+It applies the namespaces + MetalLB pool, creates/reuses the Pi-hole admin
+Secret, `helm upgrade --install`s both charts, and applies the ingress.
+
+## Make the whole LAN use Pi-hole (any ISP, worldwide)
+
+See **[docs/dns-setup.md](docs/dns-setup.md)** — covers French ISPs (Free,
+Orange, Bouygues, SFR), generic routers worldwide, and a universal **Pi-hole
+DHCP** fallback for boxes that won't let you set a custom DNS.
+
+Freebox is automated via the local API:
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+python3 scripts/freebox-dns.py --dns 192.168.1.42   # press the Freebox arrow once
+python3 scripts/freebox-dns.py --show                # check current DHCP DNS
+python3 scripts/freebox-dns.py --revert              # hand DNS back to the Freebox
+```
+
+For other ISPs/routers, either set the DHCP DNS in the box UI, or enable
+Pi-hole's own DHCP server:
+
+```bash
+helm upgrade --install pihole helm-charts/pihole -n pihole \
+  --set existingSecret=pihole-admin --set dhcp.enabled=true \
+  --set dhcp.router=192.168.1.254   # disable the router's DHCP first
 ```
 
 ---
@@ -198,6 +211,9 @@ chmod +x deploy.sh
 ## Notes
 
 * Pi-hole uses **LoadBalancer IPs** (configure MetalLB accordingly)
+* Pi-hole admin password lives in a **Secret** — set it once via `deploy.sh` or
+  `kubectl create secret generic pihole-admin --from-literal=password=…`
 * Adhan API requires a **data folder** on the Pi (`audio` + `cities.db`)
-* HostNetwork is used for Adhan API to access audio playback directly if needed
+* HostNetwork lets the Adhan API discover Sonos/Freebox and play on the Pi's
+  own speakers (`audio.enabled` mounts `/dev/snd`)
 * Use **k9s** or `kubectl logs` to debug pods

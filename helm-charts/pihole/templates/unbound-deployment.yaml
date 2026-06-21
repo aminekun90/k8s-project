@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: unbound
-  namespace: pihole
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
