@@ -8,6 +8,7 @@
 #   ./deploy.sh                          # prompts for the Pi-hole password (first run)
 #   PIHOLE_PASSWORD=secret ./deploy.sh   # non-interactive
 #   FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh   # also point the Freebox DHCP at Pi-hole
+#   ADHAN_NODE=raspberrypi ./deploy.sh   # pin Adhan to the Pi with the speakers
 #
 set -euo pipefail
 
@@ -46,7 +47,12 @@ helm upgrade --install pihole helm-charts/pihole -n "$PIHOLE_NS" \
   --set existingSecret="$PIHOLE_SECRET"
 
 echo "==> Deploying Adhan API"
-helm upgrade --install adhan helm-charts/adhan -n "$ADHAN_NS"
+ADHAN_ARGS=()
+if [ -n "${ADHAN_NODE:-}" ]; then
+  echo "    Pinning Adhan to node '$ADHAN_NODE'"
+  ADHAN_ARGS+=(--set "nodeSelector.kubernetes\.io/hostname=$ADHAN_NODE")
+fi
+helm upgrade --install adhan helm-charts/adhan -n "$ADHAN_NS" ${ADHAN_ARGS[@]+"${ADHAN_ARGS[@]}"}
 
 echo "==> Pi-hole ingress"
 kubectl apply -f pihole-ingress.yaml
