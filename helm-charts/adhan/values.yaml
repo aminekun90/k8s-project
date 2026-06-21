@@ -12,7 +12,17 @@ dnsPolicy: ClusterFirstWithHostNet
 
 timezone: Europe/Paris
 
-# Persisted app data (prayer DB, Freebox token) on the node.
+# Pin the pod to the Pi that physically has the speakers/sound card, the
+# Bluetooth adapter, and the node-local data hostPath below. Required on any
+# multi-node cluster (otherwise the pod can schedule on a node without the
+# audio hardware, off the speakers' LAN segment, or away from its data);
+# harmless on a single-node cluster. Example:
+#   nodeSelector: { kubernetes.io/hostname: raspberrypi }
+nodeSelector: {}
+
+# Persisted app data (prayer DB, Freebox token) on the node. Node-local
+# hostPath: it only survives reschedules onto the SAME node, so set
+# nodeSelector above to keep the pod (and its data) on one Pi.
 dataPath: /home/pi/data
 
 # Mount the host sound card so the "Cet appareil" device plays the adhan
