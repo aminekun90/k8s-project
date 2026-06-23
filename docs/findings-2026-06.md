@@ -126,6 +126,40 @@ python3 scripts/freebox-dns.py --reserve dc:a6:32:a7:78:41=192.168.1.42 \
 - The only hard dependency: **if the Pi is down, there is no DNS on the LAN.**
   Emergency rollback to the Freebox resolver: `python3 scripts/freebox-dns.py --revert`.
 
+## Blocklists (gravity) — enriched
+
+Default was only StevenBlack (~84k domains). Added curated lists → **~1.86M
+unique domains**. Lists live in the gravity DB on the PVC (persistent across
+restarts) but are **not** in git — re-add them with:
+
+```bash
+kubectl exec -n pihole deploy/pihole -- pihole-FTL sqlite3 /etc/pihole/gravity.db "
+INSERT OR IGNORE INTO adlist (address, enabled, comment) VALUES
+ ('https://big.oisd.nl', 1, 'OISD Big (all-in-one)'),
+ ('https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.txt', 1, 'Hagezi Multi PRO'),
+ ('https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.samsung.txt', 1, 'Hagezi Samsung Tizen telemetry/ads'),
+ ('https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.txt', 1, 'Hagezi Threat Intelligence');"
+kubectl exec -n pihole deploy/pihole -- pihole -g   # rebuild gravity
+```
+
+If a site breaks, whitelist the domain (Pi-hole UI → Domains → Allow) rather
+than removing a whole list.
+
+### YouTube ads — Pi-hole can't block them
+
+YouTube serves ads from the **same domains as the video** (`googlevideo.com`);
+blocking them breaks playback. No DNS blocklist fixes this reliably.
+- **Android TV / Fire TV / Shield**: SmartTube (sideloaded) blocks them client-side.
+- **Samsung Tizen / Apple TV**: no good blocker → YouTube Premium, or watch via a
+  browser/device that has an ad blocker. Pi-hole still blocks Samsung's own
+  telemetry/ads (`ads.samsung.com`, `samsungads.com`, etc.).
+
+### Smart TVs that bypass Pi-hole
+
+Many TVs hardcode `8.8.8.8` or use DoH, ignoring the DHCP-advertised DNS. To
+force them through Pi-hole you'd need to redirect/block outbound port 53 (and
+DoH) at the router — not easily doable on the Freebox.
+
 ## Known structural issues (not yet fixed)
 
 The cluster runs **two LoadBalancer controllers** (k3s klipper *ServiceLB* +
