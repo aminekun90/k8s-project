@@ -63,6 +63,51 @@ Each entry generates:
 > Requirement: a client only resolves these names if it uses **`192.168.1.44`**
 > (Pi-hole) as its DNS server. See `docs/dns-setup.md`.
 
+## LAN-wide DNS rollout (done)
+
+Pi-hole only serves a device if that device uses **`192.168.1.44`** as its DNS.
+This was rolled out to the whole house via the Freebox DHCP.
+
+### Freebox (whole house)
+
+The Freebox is the LAN DHCP server, so the clean way to push Pi-hole everywhere
+is to set the DHCP-advertised DNS. Done via `scripts/freebox-dns.py` (Freebox OS
+API, stdlib only):
+
+```bash
+python3 scripts/freebox-dns.py --show              # current DHCP DNS
+python3 scripts/freebox-dns.py --dns 192.168.1.44  # point the house at Pi-hole
+python3 scripts/freebox-dns.py --revert            # back to the Freebox itself
+```
+
+Gotchas encountered:
+- **First run pairs the app**: press the RIGHT ARROW on the Freebox front panel
+  within 60s. Token is cached in `scripts/.fbx_token.json` (gitignored).
+- **Permission must be enabled manually**: after pairing, the update failed with
+  *"Cette application n'est pas autorisée à accéder à cette fonction"*. Fix:
+  Freebox OS → Paramètres → Gestion des accès → Applications → "Aladhan DNS
+  Setup" → enable **"Modification des réglages de la Freebox"**, then re-run.
+- Result: DHCP DNS went from `['192.168.1.254', ...]` to `['192.168.1.44', ...]`.
+
+### Clients pick it up on lease renewal
+
+Devices use the new DNS only after a DHCP lease renewal. To force it on macOS,
+a `ipconfig set en0 DHCP` was **not** enough — had to **cycle Wi-Fi**:
+
+```bash
+networksetup -setdnsservers Wi-Fi empty   # use DHCP-provided DNS (not a manual one)
+networksetup -setairportpower en0 off && sleep 3 && networksetup -setairportpower en0 on
+scutil --dns | grep 'nameserver\[0\]'     # should now show 192.168.1.44
+```
+
+For a quick single-machine test without touching the Freebox:
+`networksetup -setdnsservers Wi-Fi 192.168.1.44` (revert with `… empty`).
+
+### ⚠️ Operational note
+
+With the Freebox pointing at Pi-hole, **if the Pi is down there is no DNS on the
+LAN**. Emergency rollback: `python3 scripts/freebox-dns.py --revert`.
+
 ## Known structural issues (not yet fixed)
 
 The cluster runs **two LoadBalancer controllers** (k3s klipper *ServiceLB* +
