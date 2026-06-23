@@ -103,10 +103,28 @@ scutil --dns | grep 'nameserver\[0\]'     # should now show 192.168.1.44
 For a quick single-machine test without touching the Freebox:
 `networksetup -setdnsservers Wi-Fi 192.168.1.44` (revert with `… empty`).
 
-### ⚠️ Operational note
+### Static IP for the Pi (reboot safety)
 
-With the Freebox pointing at Pi-hole, **if the Pi is down there is no DNS on the
-LAN**. Emergency rollback: `python3 scripts/freebox-dns.py --revert`.
+The whole setup depends on the Pi being `192.168.1.42` (node IP + MetalLB pool
+`.42-.44`). The Pi's `eth0` is **DHCP** (`ipv4.method: auto`), so after a Freebox
+reboot a different IP could in theory be leased and break everything. Fixed with
+a **static DHCP lease** on the Freebox:
+
+```bash
+python3 scripts/freebox-dns.py --reserve dc:a6:32:a7:78:41=192.168.1.42 \
+  --comment "Raspberry Pi k3s (Pi-hole)"
+```
+
+(Pi `eth0` MAC: `dc:a6:32:a7:78:41`.) The Pi now always gets `.42`.
+
+### ⚠️ Operational note — rebooting the Freebox is safe
+
+- The DHCP DNS setting (`192.168.1.44`) and the static lease are **persistent**;
+  they survive a Freebox reboot.
+- Pi-hole runs on the Pi independently — as long as the **Pi stays up**, DNS keeps
+  working. Reboot the Freebox alone without worry.
+- The only hard dependency: **if the Pi is down, there is no DNS on the LAN.**
+  Emergency rollback to the Freebox resolver: `python3 scripts/freebox-dns.py --revert`.
 
 ## Known structural issues (not yet fixed)
 
