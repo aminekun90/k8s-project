@@ -8,5 +8,11 @@ spec:
   selector:
     app: unbound
   ports:
-    - port: {{ .Values.unbound.port }}
+    - name: dns-udp
+      port: {{ .Values.unbound.port }}
       targetPort: {{ .Values.unbound.port }}
+      protocol: UDP
+    - name: dns-tcp
+      port: {{ .Values.unbound.port }}
+      targetPort: {{ .Values.unbound.port }}
+      protocol: TCP

@@ -45,6 +45,17 @@ spec:
               value: {{ .Values.upstreamDns | quote }}
             - name: FTLCONF_dns_listeningMode
               value: "all"
+            {{- if .Values.localApps }}
+            # Let Pi-hole load custom records from /etc/dnsmasq.d (local DNS).
+            - name: FTLCONF_misc_etc_dnsmasq_d
+              value: "true"
+            # Pi-hole hardcodes "pi.hole" to its own (pod) IP; force it to the
+            # LAN ingress IP so the admin UI is reachable by hostname.
+            - name: FTLCONF_dns_reply_host_force4
+              value: "true"
+            - name: FTLCONF_dns_reply_host_IPv4
+              value: {{ .Values.lanIngressIP | quote }}
+            {{- end }}
             {{- if .Values.dhcp.enabled }}
             # Built-in DHCP server — the universal way to push Pi-hole as DNS to
             # every device when the router/ISP box can't set a custom DNS.
@@ -65,6 +76,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /etc/pihole
+            {{- if .Values.localApps }}
+            - name: local-dns
+              mountPath: /etc/dnsmasq.d/02-local-dns.conf
+              subPath: 02-local-dns.conf
+            {{- end }}
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
@@ -74,3 +90,8 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: pihole-data
+        {{- if .Values.localApps }}
+        - name: local-dns
+          configMap:
+            name: pihole-local-dns
+        {{- end }}

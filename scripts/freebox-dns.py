@@ -112,6 +112,17 @@ def set_dhcp_dns(host, headers, dns_list):
     return res.get("result", {})
 
 
+def reserve_ip(host, headers, mac, ip, comment):
+    """Create/update a static DHCP lease so a device always gets the same IP."""
+    payload = {"mac": mac.lower(), "ip": ip, "comment": comment}
+    res = _request("POST", f"{host}{API}/dhcp/static_lease/", payload, headers=headers)
+    if not res.get("success") and res.get("error_code") == "exist":
+        res = _request("PUT", f"{host}{API}/dhcp/static_lease/{mac.lower()}", payload, headers=headers)
+    if not res.get("success"):
+        sys.exit(f"Failed to reserve IP: {res.get('msg')}")
+    return res.get("result", {})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--host", default=DEFAULT_HOST, help="Freebox base URL")
@@ -119,9 +130,21 @@ def main():
     group.add_argument("--dns", help="DNS IP to advertise via DHCP (e.g. the Pi-hole IP)")
     group.add_argument("--show", action="store_true", help="Show the current DHCP DNS and exit")
     group.add_argument("--revert", action="store_true", help="Clear custom DNS (use the Freebox itself)")
+    group.add_argument("--reserve", metavar="MAC=IP",
+                       help="Create a static DHCP lease, e.g. dc:a6:32:a7:78:41=192.168.1.42")
+    parser.add_argument("--comment", default="k8s-project", help="Comment for --reserve")
     args = parser.parse_args()
 
     headers = login(args.host)
+
+    if args.reserve:
+        mac, _, ip = args.reserve.partition("=")
+        if not mac or not ip:
+            sys.exit("--reserve expects MAC=IP, e.g. dc:a6:32:a7:78:41=192.168.1.42")
+        result = reserve_ip(args.host, headers, mac, ip, args.comment)
+        print(f"Static lease set: {result.get('mac')} -> {result.get('ip')}")
+        return
+
     current = get_dhcp(args.host, headers)
     print(f"Current DHCP DNS: {current.get('dns')}")
 

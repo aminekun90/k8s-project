@@ -18,16 +18,10 @@ spec:
           image: {{ .Values.unbound.image }}
           ports:
             - containerPort: {{ .Values.unbound.port }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              wget -O /opt/unbound/etc/unbound/root.hints https://www.internic.net/domain/named.root
-              exec unbound -d -c /opt/unbound/etc/unbound/unbound.conf
           volumeMounts:
             - name: unbound-config
-              mountPath: /opt/unbound/etc/unbound/unbound.conf
-              subPath: unbound.conf
+              mountPath: /etc/unbound/custom.conf.d/custom.conf
+              subPath: custom.conf
           resources:
 {{ toYaml .Values.resources.unbound | indent 12 }}
       volumes:
