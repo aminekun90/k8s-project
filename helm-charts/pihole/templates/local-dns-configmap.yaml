@@ -1,0 +1,12 @@
+{{- if .Values.localApps }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pihole-local-dns
+  namespace: {{ .Release.Namespace }}
+data:
+  02-local-dns.conf: |
+    {{- range .Values.localApps }}
+    address=/{{ .host }}/{{ $.Values.lanIngressIP }}
+    {{- end }}
+{{- end }}

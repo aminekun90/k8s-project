@@ -67,3 +67,19 @@ resources:
 unbound:
   image: klutchell/unbound:1.25.1
   port: 5335
+
+# Apps reachable by hostname on the LAN. ONE entry per app generates BOTH:
+#   - a local DNS record (host -> lanIngressIP) served by Pi-hole's dnsmasq
+#   - a traefik Ingress (host -> service:port) in the app's namespace
+# To add a new app: append one entry here and redeploy. Nothing else to touch.
+ingressClassName: traefik
+lanIngressIP: 192.168.1.43   # the traefik LoadBalancer IP (the HTTP entrypoint)
+localApps:
+  - host: pi.hole
+    namespace: pihole
+    service: pihole-web
+    port: 80
+  - host: aladhan.app
+    namespace: adhan
+    service: adhan-api
+    port: 8000

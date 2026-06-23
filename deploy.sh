@@ -54,8 +54,9 @@ if [ -n "${ADHAN_NODE:-}" ]; then
 fi
 helm upgrade --install adhan helm-charts/adhan -n "$ADHAN_NS" ${ADHAN_ARGS[@]+"${ADHAN_ARGS[@]}"}
 
-echo "==> Pi-hole ingress"
-kubectl apply -f pihole-ingress.yaml
+# Local DNS records + traefik Ingress for hostname access (pi.hole, aladhan.app,
+# ...) are generated from `localApps` in the pihole chart values — no extra apply
+# needed. Add a new app = one entry in helm-charts/pihole/values.yaml.
 
 # Optional: point the Freebox Pop DHCP at Pi-hole so every device uses it.
 if [ -n "${FREEBOX_DNS_IP:-}" ]; then
