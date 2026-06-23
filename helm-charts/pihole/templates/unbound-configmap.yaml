@@ -4,10 +4,14 @@ metadata:
   name: unbound-config
   namespace: {{ .Release.Namespace }}
 data:
-  unbound.conf: |
+  custom.conf: |
     server:
       interface: 0.0.0.0
       port: 5335
+
+      # Allow queries from the k3s pod/service CIDRs (Pi-hole runs as a pod).
+      access-control: 127.0.0.0/8 allow
+      access-control: 10.0.0.0/8 allow
 
       verbosity: 0
 
@@ -15,8 +19,6 @@ data:
       do-ip6: no
       do-udp: yes
       do-tcp: yes
-
-      root-hints: /etc/unbound/root.hints
 
       harden-glue: yes
       harden-dnssec-stripped: yes
@@ -28,8 +30,8 @@ data:
 
       num-threads: 1
 
-      so-rcvbuf: 1m
-      so-sndbuf: 1m
+      so-rcvbuf: 0
+      so-sndbuf: 0
 
       hide-identity: yes
       hide-version: yes

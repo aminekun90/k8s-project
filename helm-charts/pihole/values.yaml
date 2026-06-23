@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: pihole/pihole
-  tag: "2026.02.0"
+  tag: "2026.06.0"
   pullPolicy: IfNotPresent
 
 timezone: Europe/Paris
@@ -36,10 +36,12 @@ dhcp:
 
 service:
   web:
-    type: LoadBalancer
-    loadBalancerIP: 192.168.1.42
+    # NodePort, not LoadBalancer: the MetalLB pool is shared with traefik/adhan
+    # and the cluster also runs k3s klipper ServiceLB — a web LoadBalancer IP
+    # collides. Admin UI is reached at http://192.168.1.42:30080/admin.
+    type: NodePort
+    nodePort: 30080
     port: 80
-    externalTrafficPolicy: Local
   dns:
     type: LoadBalancer
     loadBalancerIP: 192.168.1.44
@@ -63,5 +65,5 @@ resources:
       memory: 256Mi
 
 unbound:
-  image: klutchell/unbound:latest
+  image: klutchell/unbound:1.25.1
   port: 5335
