@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: aminekun90/adhan-api
-  tag: "0.1.1"
+  tag: "0.1.2"
   pullPolicy: IfNotPresent
 
 # hostNetwork is required for Sonos (SSDP) and Freebox (mDNS) LAN discovery.
