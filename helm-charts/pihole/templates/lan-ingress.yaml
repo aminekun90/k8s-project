@@ -5,6 +5,10 @@ kind: Ingress
 metadata:
   name: {{ .host | replace "." "-" }}
   namespace: {{ .namespace }}
+  {{- if .rootRedirectTo }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .namespace }}-{{ .host | replace "." "-" }}-root@kubernetescrd
+  {{- end }}
 spec:
   ingressClassName: {{ $.Values.ingressClassName | default "traefik" }}
   rules:
@@ -18,4 +22,17 @@ spec:
                 name: {{ .service }}
                 port:
                   number: {{ .port }}
+{{- if .rootRedirectTo }}
+---
+# Redirect the bare host ("/") to the app's real entrypoint (e.g. Pi-hole /admin/).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ .host | replace "." "-" }}-root
+  namespace: {{ .namespace }}
+spec:
+  redirectRegex:
+    regex: ^(https?://[^/]+)/?$
+    replacement: ${1}{{ .rootRedirectTo }}
+{{- end }}
 {{- end }}

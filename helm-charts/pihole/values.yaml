@@ -18,8 +18,12 @@ timezone: Europe/Paris
 adminPassword: ""
 existingSecret: ""        # name of a pre-created Secret holding the password
 existingSecretKey: password
-# Upstream resolver(s) for Pi-hole v6 (replaces the deprecated DNS1/DNS2 envs).
-upstreamDns: unbound.pihole.svc.cluster.local#5335
+# Upstream resolver for Pi-hole v6. MUST be an IP, not a hostname: dnsmasq
+# resolves `server=` at startup, and a hostname creates a chicken-and-egg (no DNS
+# to resolve the upstream's name) — on a cold boot FTL then refuses to start and
+# the whole LAN loses DNS. We use unbound's fixed ClusterIP (pinned in
+# unbound-service.yaml) so no resolution is ever needed.
+upstreamDns: 10.43.110.126#5335
 
 # Optional: let Pi-hole be the LAN DHCP server. This is the universal way to
 # push Pi-hole as DNS to every device when the router/ISP box can't set a
@@ -74,12 +78,15 @@ unbound:
 # To add a new app: append one entry here and redeploy. Nothing else to touch.
 ingressClassName: traefik
 lanIngressIP: 192.168.1.43   # the traefik LoadBalancer IP (the HTTP entrypoint)
+# Use .home hostnames (not .app/.hole): .app is HSTS-preloaded so browsers force
+# HTTPS and reject our cert; .home is plain HTTP everywhere, no cert needed.
 localApps:
-  - host: pi.hole
+  - host: pihole.home
     namespace: pihole
     service: pihole-web
     port: 80
-  - host: aladhan.app
+    rootRedirectTo: /admin/   # traefik redirect so the bare host lands on the UI
+  - host: aladhan.home
     namespace: adhan
     service: adhan-api
     port: 8000

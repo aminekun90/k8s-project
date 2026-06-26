@@ -5,6 +5,9 @@ metadata:
   name: unbound
 spec:
   type: ClusterIP
+  # Pinned so Pi-hole's upstream (upstreamDns) can target a stable IP and never
+  # needs DNS-to-resolve-DNS at dnsmasq startup. Keep in sync with upstreamDns.
+  clusterIP: 10.43.110.126
   selector:
     app: unbound
   ports:

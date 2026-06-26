@@ -8,8 +8,12 @@ broken, the fixes applied, and how to extend hostname-based access.
 Pi-hole was deployed but **never actually resolved upstream** (0 queries logged
 for months). Root cause: the `unbound` Service was **TCP-only**, so Pi-hole's
 UDP queries to it failed silently. Several other drifts (`:latest` images, web
-LoadBalancer IP conflict) were fixed too. Hostname access (`pi.hole`,
-`aladhan.app`) is now driven by a single `localApps` list.
+LoadBalancer IP conflict) were fixed too. Hostname access (`pihole.home`,
+`aladhan.home`) is now driven by a single `localApps` list.
+
+**Browser URLs:** `http://pihole.home` (redirects to `/admin/`) and
+`http://aladhan.home`. The old `.app`/`.hole` names are gone — `.app` is
+HSTS-preloaded and unusable without a publicly-trusted cert.
 
 ## Bugs found & fixed
 
@@ -21,6 +25,10 @@ LoadBalancer IP conflict) were fixed too. Hostname access (`pi.hole`,
 | Unbound 1.25 wouldn't start | Image is **distroless** (no `/bin/sh`), chart used `command: /bin/sh -c …` | Drop the command; mount config in `/etc/unbound/custom.conf.d/`; remove `root-hints` (image bundles its own); `so-rcvbuf/sndbuf: 0` |
 | Pi-hole web LoadBalancer stuck `<pending>` | MetalLB pool `.42-.44` full (`.42`=adhan, `.43`=traefik, `.44`=pihole-dns); also k3s klipper vs MetalLB conflict | Web back to **NodePort 30080** |
 | `pi.hole` resolved to pod IP | Pi-hole pins its own hostname to its listening (pod) IP | `FTLCONF_dns_reply_host_force4=true` + `FTLCONF_dns_reply_host_IPv4=<ingress IP>` |
+| **Whole-LAN DNS outage after a reboot** | upstream was a **hostname** (`unbound...svc.cluster.local`); dnsmasq resolves `server=` at startup → chicken-and-egg on cold boot → FTL refuses to start (`CRIT: Cannot resolve server name`) | Point `upstreamDns` at unbound's **fixed ClusterIP** (`10.43.110.126`, pinned in `unbound-service.yaml`) — no resolution at boot |
+| Pi-hole diag: `TCP connection failed (Host is unreachable)` to unbound | The live `unbound` Service had only the **UDP** port; the TCP port had silently dropped (`kubectl apply` 3-way merge didn't add it on a service created without the last-applied annotation) | `kubectl patch` to set both ports explicitly; template keeps UDP+TCP |
+| `aladhan.app`/`pi.hole` blocked in browser (`MOZILLA_PKIX_ERROR_SELF_SIGNED_CERT`, can't bypass) | `.app` is **HSTS-preloaded** → browsers force HTTPS and refuse any non-public cert (no click-through). `.hole` hit the same HTTPS-first wall | Switch local hostnames to **`.home`** (`pihole.home`, `aladhan.home`) — plain HTTP everywhere, no cert |
+| `pihole.home` resolved to `.42` (403) | Stale `dns.hosts` entries (`192.168.1.42 pi.hole` / `pihole.home`) overrode the dnsmasq records | Force `FTLCONF_dns_hosts=""`; local records come only from `/etc/dnsmasq.d` |
 
 ## IP map (MetalLB pool 192.168.1.42–.44)
 
@@ -41,11 +49,12 @@ record and the traefik Ingress:
 ingressClassName: traefik
 lanIngressIP: 192.168.1.43   # traefik LoadBalancer IP
 localApps:
-  - host: pi.hole
+  - host: pihole.home
     namespace: pihole
     service: pihole-web
     port: 80
-  - host: aladhan.app
+    rootRedirectTo: /admin/   # optional: bare host -> this path (traefik middleware)
+  - host: aladhan.home
     namespace: adhan
     service: adhan-api
     port: 8000
@@ -56,6 +65,12 @@ Each entry generates:
   Pi-hole at `/etc/dnsmasq.d/`, requires `FTLCONF_misc_etc_dnsmasq_d=true`)
 - a traefik `Ingress` (`<host> → <service>:<port>`) created **in the app's
   namespace** (an Ingress backend must share its Service's namespace)
+- optionally, if `rootRedirectTo` is set, a traefik `Middleware` that redirects
+  the bare host `/` to that path (e.g. Pi-hole serves its UI under `/admin/`)
+
+**Use `.home`, not `.app`/`.hole`**: `.app` is on the HSTS preload list so
+browsers force HTTPS and reject self-signed certs with no bypass. `.home` works
+over plain HTTP on every device (no per-device cert/CA to install).
 
 **To add a new app:** append one entry to `localApps` and run `./deploy.sh`
 (or `helm upgrade … pihole`). Nothing else to touch.
@@ -88,6 +103,13 @@ Gotchas encountered:
   Freebox OS → Paramètres → Gestion des accès → Applications → "Aladhan DNS
   Setup" → enable **"Modification des réglages de la Freebox"**, then re-run.
 - Result: DHCP DNS went from `['192.168.1.254', ...]` to `['192.168.1.44', ...]`.
+- **`--host` now defaults to the LAN IP `192.168.1.254`**, not
+  `mafreebox.freebox.fr`: once the LAN uses Pi-hole/unbound, that hostname
+  resolves to Free's **public** IP (no split-horizon) and the local API times out.
+- **Don't add `8.8.8.8` as a secondary DNS**: it isn't a true failover — clients
+  query either resolver unpredictably, so part of the traffic bypasses Pi-hole's
+  filtering. Keep Pi-hole alone (`--dns 192.168.1.44`). It was briefly added as a
+  safety net during an outage, then removed once Pi-hole was hardened.
 
 ### Clients pick it up on lease renewal
 

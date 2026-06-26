@@ -30,7 +30,10 @@ APP_ID = "pi.aladhan.dns"
 APP_NAME = "Aladhan DNS Setup"
 APP_VERSION = "1.0.0"
 DEVICE_NAME = "k8s-project"
-DEFAULT_HOST = "http://mafreebox.freebox.fr"
+# LAN IP, not mafreebox.freebox.fr: once the LAN uses Pi-hole/unbound, that
+# hostname resolves to Free's PUBLIC IP (no split-horizon) and the local API call
+# times out. The gateway IP is stable. Override with --host if yours differs.
+DEFAULT_HOST = "http://192.168.1.254"
 API = "/api/v8"
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".fbx_token.json")
 

@@ -55,6 +55,11 @@ spec:
               value: "true"
             - name: FTLCONF_dns_reply_host_IPv4
               value: {{ .Values.lanIngressIP | quote }}
+            # Keep dns.hosts empty: local records are managed via /etc/dnsmasq.d
+            # (localApps). Stale dns.hosts entries (e.g. "<ip> pihole.home") would
+            # otherwise override the dnsmasq records and point to the wrong IP.
+            - name: FTLCONF_dns_hosts
+              value: ""
             {{- end }}
             {{- if .Values.dhcp.enabled }}
             # Built-in DHCP server — the universal way to push Pi-hole as DNS to
