@@ -24,6 +24,7 @@ jobs:
         run: |
           helm lint helm-charts/adhan
           helm lint helm-charts/pihole --set adminPassword=ci-dummy
+          helm lint helm-charts/increaser
 
       - name: Render templates (must succeed)
         run: |
@@ -32,13 +33,14 @@ jobs:
           # Also exercise the optional Pi-hole DHCP path.
           helm template pihole helm-charts/pihole -n pihole \
             --set adminPassword=ci-dummy --set dhcp.enabled=true > /dev/null
+          helm template increaser helm-charts/increaser -n increaser > /dev/null
 
       - name: Validate manifests against the Kubernetes schema
         run: |
           curl -fsSL -o /tmp/kubeconform.tar.gz \
             https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
           tar -xzf /tmp/kubeconform.tar.gz -C /tmp
-          for chart in adhan pihole; do
+          for chart in adhan pihole increaser; do
             args=""
             [ "$chart" = "pihole" ] && args="--set adminPassword=ci-dummy"
             helm template "$chart" "helm-charts/$chart" -n "$chart" $args \
