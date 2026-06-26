@@ -18,8 +18,12 @@ timezone: Europe/Paris
 adminPassword: ""
 existingSecret: ""        # name of a pre-created Secret holding the password
 existingSecretKey: password
-# Upstream resolver(s) for Pi-hole v6 (replaces the deprecated DNS1/DNS2 envs).
-upstreamDns: unbound.pihole.svc.cluster.local#5335
+# Upstream resolver for Pi-hole v6. MUST be an IP, not a hostname: dnsmasq
+# resolves `server=` at startup, and a hostname creates a chicken-and-egg (no DNS
+# to resolve the upstream's name) — on a cold boot FTL then refuses to start and
+# the whole LAN loses DNS. We use unbound's fixed ClusterIP (pinned in
+# unbound-service.yaml) so no resolution is ever needed.
+upstreamDns: 10.43.110.126#5335
 
 # Optional: let Pi-hole be the LAN DHCP server. This is the universal way to
 # push Pi-hole as DNS to every device when the router/ISP box can't set a
