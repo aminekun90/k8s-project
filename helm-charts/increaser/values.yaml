@@ -1,0 +1,47 @@
+image:
+  repository: aminekun90/increaser-app
+  # Pin a version for reproducibility; deploy.sh pushes both <version> and latest.
+  tag: latest
+  pullPolicy: Always
+
+defaultSchedule: "0 0 * * *"
+
+# Keep the Pi tidy: few history entries + auto-delete finished jobs.
+historyLimit:
+  success: 3
+  failed: 3
+ttlSecondsAfterFinished: 86400   # delete a finished job (and its pod) after 1 day
+backoffLimit: 3                  # retry transient failures (e.g. DNS EAI_AGAIN)
+activeDeadlineSeconds: 1800      # don't let a run hang forever (30 min cap)
+
+# Pi 4 friendly bounds (the tool fires many parallel HTTP downloads).
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: "1"
+    memory: 256Mi
+
+# One CronJob per entry. To add a package: append an entry and redeploy.
+jobs:
+  - name: advanced-color-utils
+    package: advanced-color-utils
+    num: "3845"
+    max: "100"
+    schedule: "0 0 * * *"
+  - name: mdns-listener-advanced
+    package: mdns-listener-advanced
+    num: "2976"
+    max: "100"
+    schedule: "30 0 * * *"
+  - name: ngx-toast
+    package: "@aminekun90/ngx-toast"
+    num: "3511"
+    max: "100"
+    schedule: "0 1 * * *"
+  - name: react-toast
+    package: "@aminekun90/react-toast"
+    num: "3456"
+    max: "100"
+    schedule: "30 1 * * *"
