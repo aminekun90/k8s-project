@@ -78,12 +78,14 @@ unbound:
 # To add a new app: append one entry here and redeploy. Nothing else to touch.
 ingressClassName: traefik
 lanIngressIP: 192.168.1.43   # the traefik LoadBalancer IP (the HTTP entrypoint)
+# Use .home hostnames (not .app/.hole): .app is HSTS-preloaded so browsers force
+# HTTPS and reject our cert; .home is plain HTTP everywhere, no cert needed.
 localApps:
-  - host: pi.hole
+  - host: pihole.home
     namespace: pihole
     service: pihole-web
     port: 80
-  - host: aladhan.app
+  - host: aladhan.home
     namespace: adhan
     service: adhan-api
     port: 8000
