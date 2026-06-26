@@ -90,3 +90,7 @@ localApps:
     namespace: adhan
     service: adhan-api
     port: 8000
+  - host: k8s.home          # Headlamp — web dashboard for the whole cluster
+    namespace: headlamp
+    service: headlamp
+    port: 80
