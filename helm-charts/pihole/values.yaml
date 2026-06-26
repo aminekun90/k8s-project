@@ -85,6 +85,7 @@ localApps:
     namespace: pihole
     service: pihole-web
     port: 80
+    rootRedirectTo: /admin/   # traefik redirect so the bare host lands on the UI
   - host: aladhan.home
     namespace: adhan
     service: adhan-api
