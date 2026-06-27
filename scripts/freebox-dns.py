@@ -13,6 +13,8 @@ Examples:
     python3 scripts/freebox-dns.py --show
     python3 scripts/freebox-dns.py --dns 192.168.1.42
     python3 scripts/freebox-dns.py --revert        # back to the Freebox itself
+    python3 scripts/freebox-dns.py --disable-ipv6  # stop the competing IPv6 DNS resolver
+    python3 scripts/freebox-dns.py --enable-ipv6   # re-enable IPv6 (e.g. for a NAS / remote access)
 
 Only the Python standard library is used (no pip install).
 """
@@ -115,6 +117,24 @@ def set_dhcp_dns(host, headers, dns_list):
     return res.get("result", {})
 
 
+def get_ipv6(host, headers):
+    return _request("GET", f"{host}{API}/connection/ipv6/config/", headers=headers).get("result", {})
+
+
+def set_ipv6(host, headers, enabled):
+    res = _request("PUT", f"{host}{API}/connection/ipv6/config/", {"ipv6_enabled": enabled}, headers=headers)
+    if not res.get("success"):
+        # Freebox Pop firmware rejects the IPv6 toggle over the API
+        # ("Impossible de récupérer l'état de la connexion"). Fall back to the UI.
+        sys.exit(
+            f"Failed to update IPv6 via the API: {res.get('msg')}\n"
+            "This firmware only lets you toggle IPv6 from the Freebox UI:\n"
+            "  http://mafreebox.freebox.fr -> Paramètres de la Freebox\n"
+            "  -> Configuration IPv6 (ou Mode réseau) -> désactiver -> valider"
+        )
+    return res.get("result", {})
+
+
 def reserve_ip(host, headers, mac, ip, comment):
     """Create/update a static DHCP lease so a device always gets the same IP."""
     payload = {"mac": mac.lower(), "ip": ip, "comment": comment}
@@ -135,10 +155,24 @@ def main():
     group.add_argument("--revert", action="store_true", help="Clear custom DNS (use the Freebox itself)")
     group.add_argument("--reserve", metavar="MAC=IP",
                        help="Create a static DHCP lease, e.g. dc:a6:32:a7:78:41=192.168.1.42")
+    group.add_argument("--disable-ipv6", action="store_true",
+                       help="Disable IPv6 on the Freebox (removes the competing IPv6 DNS "
+                            "resolver so every device uses Pi-hole — fixes .home flakiness "
+                            "and IPv6 ad-leak). Reversible with --enable-ipv6.")
+    group.add_argument("--enable-ipv6", action="store_true", help="Re-enable IPv6 on the Freebox")
     parser.add_argument("--comment", default="k8s-project", help="Comment for --reserve")
     args = parser.parse_args()
 
     headers = login(args.host)
+
+    if args.disable_ipv6 or args.enable_ipv6:
+        enabled = bool(args.enable_ipv6)
+        current = get_ipv6(args.host, headers)
+        print(f"Current ipv6_enabled: {current.get('ipv6_enabled')}")
+        result = set_ipv6(args.host, headers, enabled)
+        print(f"Updated ipv6_enabled: {result.get('ipv6_enabled')}")
+        print("Devices apply this on their next RA / Wi-Fi reconnect.")
+        return
 
     if args.reserve:
         mac, _, ip = args.reserve.partition("=")

@@ -161,11 +161,18 @@ service IP and bypasses the ingress).
    - This cluster's **k3s is single-stack IPv4** (`service-cidr` is IPv4 only), so
      you **cannot** give the `pihole-dns` Service an IPv6 via MetalLB without
      rebuilding the cluster dual-stack. Don't do that for home DNS.
-   - **Option A (simplest, recommended): disable IPv6 on the Freebox.**
-     `Paramètres → Mode réseau / IPv6 → désactivé` (or API
-     `PUT /api/v8/connection/ipv6/config {"ipv6_enabled": false}`). Devices then
-     get only the IPv4 Pi-hole resolver → `.home` solid, ads filtered. Trade-off:
-     no IPv6 on the LAN (fine for a home LAN).
+   - **Option A (simplest, recommended): disable IPv6 on the Freebox.** Devices
+     then get only the IPv4 Pi-hole resolver → `.home` solid, ads filtered.
+     Trade-off: no IPv6 on the LAN (fine for a home LAN with no NAS / remote
+     access — IPv4 covers all browsing, streaming, apps; fully reversible).
+     - **On the Freebox Pop the API rejects the toggle** ("Impossible de
+       récupérer l'état de la connexion"), so do it in the **UI**:
+       `http://mafreebox.freebox.fr → Paramètres de la Freebox → Configuration
+       IPv6 (ou Mode réseau) → désactiver → valider`. (`freebox-dns.py
+       --disable-ipv6` tries the API and prints these steps on failure.)
+     - **Re-enable later** (e.g. you add a NAS or want IPv6 remote access): same
+       UI toggle, or `freebox-dns.py --enable-ipv6`. Re-enabling brings back the
+       IPv6 DNS race, so you'd then need a node-level IPv6 forwarder (Option B).
    - **Option B (keep IPv6): a node-level IPv6 DNS forwarder.** Give the Pi a
      static ULA (e.g. `fd0f:ee:b0::44`), run a tiny forwarder there
      (`[fd0f:ee:b0::44]:53` → `192.168.1.44#53`), and set the Freebox DHCPv6
