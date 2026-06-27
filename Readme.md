@@ -170,6 +170,22 @@ helm upgrade adhan helm-charts/adhan -n adhan
 
 ---
 
+## OTA auto-updates (Keel)
+
+`deploy.sh` installs **[Keel](https://keel.sh)**, which polls Docker Hub and
+keeps the cluster on the newest images — no manual rollout, no inbound port
+(poll, not webhook → NAT-friendly). Set `KEEL_ENABLED=false ./deploy.sh` to skip.
+
+- **Adhan** runs `:latest` with `keel.sh/approvals: "1"` → a new image becomes a
+  **pending approval** instead of deploying. You approve it **from the Adhan app**
+  (About dialog → *Approve update*), which proxies the Keel admin API
+  (`KEEL_URL`). Set `keel.approvals: 0` in `helm-charts/adhan/values.yaml` for
+  fully automatic updates.
+- **Increaser** is a CronJob (`:latest` + `pullPolicy: Always`) that re-pulls the
+  latest image on every scheduled run — no watcher needed.
+
+---
+
 ## One-shot deploy
 
 Everything above is wrapped in **`deploy.sh`** (idempotent — safe to re-run):
