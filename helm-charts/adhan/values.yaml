@@ -2,8 +2,20 @@ replicaCount: 1
 
 image:
   repository: aminekun90/adhan-api
-  tag: "0.1.2"
-  pullPolicy: IfNotPresent
+  # Mutable tag so the cluster always runs the newest build. deploy.sh /
+  # the app CI pushes both <version> and latest.
+  tag: latest
+  pullPolicy: Always
+
+# OTA auto-update via Keel (https://keel.sh): Keel polls Docker Hub and
+# redeploys this Deployment whenever the :latest digest changes — no manual
+# rollout, no inbound port (poll, not webhook — NAT-friendly). Install Keel
+# once on the cluster (deploy.sh does it).
+keel:
+  enabled: true
+  # force = update on digest change of a mutable tag (latest).
+  policy: force
+  pollSchedule: "@every 1m"
 
 # hostNetwork is required for Sonos (SSDP) and Freebox (mDNS) LAN discovery.
 hostNetwork: true

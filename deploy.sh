@@ -9,6 +9,7 @@
 #   PIHOLE_PASSWORD=secret ./deploy.sh   # non-interactive
 #   FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh   # also point the Freebox DHCP at Pi-hole
 #   ADHAN_NODE=raspberrypi ./deploy.sh   # pin Adhan to the Pi with the speakers
+#   KEEL_ENABLED=false ./deploy.sh       # skip installing the Keel OTA auto-updater
 #
 set -euo pipefail
 
@@ -45,6 +46,18 @@ fi
 echo "==> Deploying Pi-hole + Unbound"
 helm upgrade --install pihole helm-charts/pihole -n "$PIHOLE_NS" \
   --set existingSecret="$PIHOLE_SECRET"
+
+echo "==> Keel (OTA auto-updater — polls Docker Hub, redeploys on new images)"
+if [ "${KEEL_ENABLED:-true}" = "true" ]; then
+  helm repo add keel https://charts.keel.sh >/dev/null 2>&1 || true
+  helm repo update keel >/dev/null
+  helm upgrade --install keel keel/keel \
+    --namespace keel --create-namespace \
+    --set helmProvider.enabled=false \
+    --set image.tag=latest
+else
+  echo "    Skipped (KEEL_ENABLED=false)."
+fi
 
 echo "==> Deploying Adhan API"
 ADHAN_ARGS=()

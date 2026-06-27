@@ -5,6 +5,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: adhan-api
+  {{- if .Values.keel.enabled }}
+  annotations:
+    keel.sh/policy: {{ .Values.keel.policy | quote }}
+    keel.sh/trigger: poll
+    keel.sh/pollSchedule: {{ .Values.keel.pollSchedule | quote }}
+  {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
