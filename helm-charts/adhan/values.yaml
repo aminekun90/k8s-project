@@ -57,12 +57,13 @@ bluetooth:
   enabled: false
   dbusPath: /var/run/dbus
 
+# ClusterIP, not LoadBalancer: the pod runs with hostNetwork (reachable on the
+# node IP at :8000) and is exposed on the LAN via the Traefik ingress
+# (aladhan.home). A LoadBalancer here is redundant AND harmful — k3s servicelb
+# (klipper) would claim hostPort 8000 and deadlock the hostNetwork pod.
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 8000
-  # Optional fixed IP. Must be inside the MetalLB pool (192.168.1.42-44);
-  # leave empty to auto-assign (.42 and .44 are used by Pi-hole, so .43 is free).
-  loadBalancerIP: ""
 
 resources:
   requests:
