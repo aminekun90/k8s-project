@@ -11,6 +11,11 @@ image:
 # redeploys this Deployment whenever the :latest digest changes — no manual
 # rollout, no inbound port (poll, not webhook — NAT-friendly). Install Keel
 # once on the cluster (deploy.sh does it).
+# "Force update" button: grants the app a ServiceAccount that can patch (restart)
+# its own Deployment, so the UI can re-pull the latest image on demand.
+forceUpdate:
+  enabled: true
+
 keel:
   enabled: true
   # force = update on digest change of a mutable tag (latest).

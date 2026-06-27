@@ -1,0 +1,34 @@
+{{- if .Values.forceUpdate.enabled }}
+# Lets the app trigger its own rollout restart (the "force update" button):
+# patch only its own Deployment, nothing else.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adhan-api
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: adhan-api-restart
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["adhan-api"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: adhan-api-restart
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: adhan-api-restart
+subjects:
+  - kind: ServiceAccount
+    name: adhan-api
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -28,6 +28,9 @@ spec:
       labels:
         app: adhan-api
     spec:
+      {{- if .Values.forceUpdate.enabled }}
+      serviceAccountName: adhan-api
+      {{- end }}
       hostNetwork: {{ .Values.hostNetwork }}
       {{- if .Values.hostNetwork }}
       dnsPolicy: {{ .Values.dnsPolicy }}
