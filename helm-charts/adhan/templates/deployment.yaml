@@ -10,6 +10,9 @@ metadata:
     keel.sh/policy: {{ .Values.keel.policy | quote }}
     keel.sh/trigger: poll
     keel.sh/pollSchedule: {{ .Values.keel.pollSchedule | quote }}
+    {{- if gt (int .Values.keel.approvals) 0 }}
+    keel.sh/approvals: {{ .Values.keel.approvals | quote }}
+    {{- end }}
   {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
@@ -39,6 +42,10 @@ spec:
           env:
             - name: TZ
               value: {{ .Values.timezone | quote }}
+            {{- if .Values.keel.enabled }}
+            - name: KEEL_URL
+              value: {{ .Values.keel.url | quote }}
+            {{- end }}
           {{- if or .Values.audio.enabled .Values.bluetooth.enabled }}
           securityContext:
             privileged: true  # access the host ALSA device / Bluetooth D-Bus

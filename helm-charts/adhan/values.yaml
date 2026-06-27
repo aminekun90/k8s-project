@@ -16,6 +16,12 @@ keel:
   # force = update on digest change of a mutable tag (latest).
   policy: force
   pollSchedule: "@every 1m"
+  # approvals > 0 holds new images as a *pending approval* instead of deploying
+  # them. The Adhan app surfaces it and approves it from its own UI (About
+  # dialog). Set to 0 for fully automatic updates.
+  approvals: 1
+  # In-cluster Keel admin API the app proxies to approve updates.
+  url: http://keel.keel.svc.cluster.local:9300
 
 # hostNetwork is required for Sonos (SSDP) and Freebox (mDNS) LAN discovery.
 hostNetwork: true
