@@ -1,7 +1,7 @@
-# App-of-Apps: this root Application watches argocd/apps/ and registers every
-# child Application found there. Adding a new app = drop a file in argocd/apps/.
-# The root auto-syncs (registration is cheap); the child apps use MANUAL sync so
-# you review and click "Sync" before any workload change is applied.
+# App-of-Apps: installs EVERYTHING. This root Application watches argocd/apps/
+# and registers every child Application found there (pihole, adhan, increaser).
+# Apply this only if you want all components. For a selective install, use
+# deploy.sh (it applies just the chosen argocd/apps/*.yaml). Child apps auto-sync.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

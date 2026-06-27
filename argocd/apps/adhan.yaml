@@ -12,8 +12,12 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: adhan
-  # Manual sync: review the diff in the UI, then click Sync.
+  # Auto-sync: the cluster follows git automatically. Image updates still go
+  # through Keel approval (approve from the Adhan app) — see ignoreDifferences.
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
   # Keel mutates the live Deployment image on OTA updates. Let it: don't flag the

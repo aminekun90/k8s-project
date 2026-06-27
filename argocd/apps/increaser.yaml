@@ -12,7 +12,10 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: increaser
-  # Manual sync: review the diff in the UI, then click Sync.
+  # Auto-sync: the cluster follows git automatically.
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true

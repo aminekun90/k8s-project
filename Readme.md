@@ -202,14 +202,18 @@ Layout (App-of-Apps):
 argocd/
 ├── root.yaml          # watches argocd/apps/, auto-registers child apps
 └── apps/
-    ├── pihole.yaml    # manual sync
-    ├── adhan.yaml     # manual sync; ignores image drift (managed by Keel)
-    └── increaser.yaml # manual sync
+    ├── pihole.yaml    # auto-sync
+    ├── adhan.yaml     # auto-sync; ignores image drift (managed by Keel)
+    └── increaser.yaml # auto-sync
 ```
 
-`deploy.sh` installs Argo CD and registers the apps. Child apps use **manual
-sync**, so workload changes are applied only after you approve them. The
-`root` app auto-registers new apps, so adding one = drop a file in `argocd/apps/`.
+`deploy.sh` installs Argo CD and registers the **selected** apps (it applies
+just the chosen `argocd/apps/*.yaml`). Apps **auto-sync**, so the cluster follows
+git automatically. Adhan **image** updates still require approval (Keel → approve
+from the Adhan app); only chart/manifest changes auto-apply.
+
+Apply `argocd/root.yaml` instead if you want the App-of-Apps to install
+**everything** at once.
 
 UI: `http://argocd.home` (exposed via the Pi-hole `localApps` ingress).
 
@@ -226,16 +230,20 @@ with plain `helm upgrade` instead.
 
 ## One-shot deploy
 
-Everything above is wrapped in **`deploy.sh`** (idempotent — safe to re-run):
+Everything above is wrapped in **`deploy.sh`** (idempotent — safe to re-run). It
+asks **which components** to install, then bootstraps only what's needed:
 
 ```bash
-./deploy.sh                          # prompts for the Pi-hole password (first run)
-PIHOLE_PASSWORD=secret ./deploy.sh   # non-interactive
-FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh   # also point the Freebox DHCP at Pi-hole
+./deploy.sh                              # interactive: pick pihole / adhan / increaser
+COMPONENTS="adhan" ./deploy.sh           # non-interactive: only the Adhan API
+COMPONENTS="all" PIHOLE_PASSWORD=x ./deploy.sh   # everything, no prompts
+FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh  # also point the Freebox DHCP at Pi-hole
 ```
 
-It applies the namespaces + MetalLB pool, creates/reuses the Pi-hole admin
-Secret, `helm upgrade --install`s both charts, and applies the ingress.
+For the selected components it installs **MetalLB** (if a LoadBalancer is
+needed), creates/reuses the Pi-hole admin Secret, installs **Keel** (for Adhan)
+and **Argo CD**, then registers the chosen apps — which auto-sync from git.
+Prerequisites: a running cluster with `kubectl` + `helm`.
 
 ## Make the whole LAN use Pi-hole (any ISP, worldwide)
 
