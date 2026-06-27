@@ -112,6 +112,7 @@ if [ "$ARGOCD_ENABLED" = "true" ]; then
   if ! kubectl get deploy argocd-server -n argocd >/dev/null 2>&1; then
     kubectl get ns argocd >/dev/null 2>&1 || kubectl create namespace argocd
     kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+    kubectl wait --for=condition=established --timeout=120s crd/applications.argoproj.io
     # Serve the UI over plain HTTP so traefik (argocd.home) can reach it.
     kubectl -n argocd patch configmap argocd-cmd-params-cm --type merge \
       -p '{"data":{"server.insecure":"true"}}'
