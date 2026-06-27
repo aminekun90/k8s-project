@@ -16,6 +16,10 @@ metadata:
   {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  # hostNetwork binds port 8000 on the node, so a rolling update would deadlock
+  # (the new pod can't bind the port until the old one is gone). Recreate first.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: adhan-api
