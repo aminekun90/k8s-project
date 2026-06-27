@@ -173,13 +173,29 @@ service IP and bypasses the ingress).
      - **Re-enable later** (e.g. you add a NAS or want IPv6 remote access): same
        UI toggle, or `freebox-dns.py --enable-ipv6`. Re-enabling brings back the
        IPv6 DNS race, so you'd then need a node-level IPv6 forwarder (Option B).
-   - **Option B (keep IPv6): a node-level IPv6 DNS forwarder.** Give the Pi a
-     static ULA (e.g. `fd0f:ee:b0::44`), run a tiny forwarder there
-     (`[fd0f:ee:b0::44]:53` → `192.168.1.44#53`), and set the Freebox DHCPv6
-     custom DNS to it (`PUT /api/v8/dhcpv6/config {"enabled": true,
-     "use_custom_dns": true, "dns": {...}}`). More moving parts, and **macOS/iOS
-     often prefer the RA/RDNSS resolver over DHCPv6**, so test that clients
-     actually pick it up before relying on it.
+   - **Option B (keep IPv6 — implemented here): route IPv6 DNS through Pi-hole
+     via the node's host dnsmasq.** The k3s node already runs a host
+     `dnsmasq.service` listening on `[::]:53`. Point it at Pi-hole and have the
+     Freebox advertise the node's IPv6 as the LAN's custom IPv6 DNS:
+
+     1. On the node, forward all queries to Pi-hole (config:
+        [`node-dns/dnsmasq-pihole-forward.conf`](../node-dns/dnsmasq-pihole-forward.conf)):
+        ```bash
+        sudo cp node-dns/dnsmasq-pihole-forward.conf /etc/dnsmasq.d/pihole.conf
+        sudo systemctl restart dnsmasq
+        ```
+        (k3s servicelb holds the IPv4 hostPort 53, but the node's **IPv6** `:53`
+        is free, so this needs no cluster change / restart.)
+     2. Find the node's global IPv6: `ip -6 addr show dev eth0 scope global`
+        (e.g. `2a01:e0a:10ab:4070:dea6:32ff:fea7:7841`).
+     3. Freebox UI → **Paramètres → Configuration IPv6 → DNS IPv6 → "Forcer
+        l'utilisation de serveurs DNS IPv6 personnalisés"** → paste the node IPv6.
+        Reconnect Wi-Fi to apply.
+
+     Now IPv6 queries are ad-filtered and resolve `.home` too. **Caveat:** the
+     node IPv6 above uses the ISP-delegated prefix; if Free ever changes your
+     IPv6 prefix, re-read it and update the Freebox entry (rare, but it can
+     happen on a full Freebox reset).
 
 ## Caveats (all methods)
 
