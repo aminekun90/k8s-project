@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: adhan
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/aminekun90/k8s-project.git
+    targetRevision: main
+    path: helm-charts/adhan
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: adhan
+  # Manual sync: review the diff in the UI, then click Sync.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+  # Keel mutates the live Deployment image on OTA updates. Let it: don't flag the
+  # container image as drift so Argo doesn't fight Keel over the same field.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: adhan-api
+      jsonPointers:
+        - /spec/template/spec/containers/0/image

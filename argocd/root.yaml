@@ -1,0 +1,26 @@
+# App-of-Apps: this root Application watches argocd/apps/ and registers every
+# child Application found there. Adding a new app = drop a file in argocd/apps/.
+# The root auto-syncs (registration is cheap); the child apps use MANUAL sync so
+# you review and click "Sync" before any workload change is applied.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/aminekun90/k8s-project.git
+    targetRevision: main
+    path: argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

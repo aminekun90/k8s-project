@@ -186,6 +186,44 @@ keeps the cluster on the newest images — no manual rollout, no inbound port
 
 ---
 
+## GitOps (Argo CD)
+
+Keel updates **images**; **Argo CD** keeps the cluster in sync with the **repo**
+(charts, values, manifests). It pulls this repo (NAT-friendly) and shows a diff
+whenever git changes — you review it and click **Sync**.
+
+```
+git push k8s-project  →  Argo CD: "OutOfSync"  →  review diff  →  Sync  →  applied
+```
+
+Layout (App-of-Apps):
+
+```
+argocd/
+├── root.yaml          # watches argocd/apps/, auto-registers child apps
+└── apps/
+    ├── pihole.yaml    # manual sync
+    ├── adhan.yaml     # manual sync; ignores image drift (managed by Keel)
+    └── increaser.yaml # manual sync
+```
+
+`deploy.sh` installs Argo CD and registers the apps. Child apps use **manual
+sync**, so workload changes are applied only after you approve them. The
+`root` app auto-registers new apps, so adding one = drop a file in `argocd/apps/`.
+
+UI: `http://argocd.home` (exposed via the Pi-hole `localApps` ingress).
+
+```bash
+# initial admin password
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d
+```
+
+Set `ARGOCD_ENABLED=false ./deploy.sh` to bypass Argo CD and deploy the charts
+with plain `helm upgrade` instead.
+
+---
+
 ## One-shot deploy
 
 Everything above is wrapped in **`deploy.sh`** (idempotent — safe to re-run):

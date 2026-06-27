@@ -94,3 +94,7 @@ localApps:
     namespace: headlamp
     service: headlamp
     port: 80
+  - host: argocd.home       # Argo CD — GitOps UI (server runs with --insecure)
+    namespace: argocd
+    service: argocd-server
+    port: 80
