@@ -249,7 +249,10 @@ Prerequisites: a running cluster with `kubectl` + `helm`.
 
 See **[docs/dns-setup.md](docs/dns-setup.md)** — covers French ISPs (Free,
 Orange, Bouygues, SFR), generic routers worldwide, and a universal **Pi-hole
-DHCP** fallback for boxes that won't let you set a custom DNS.
+DHCP** fallback for boxes that won't let you set a custom DNS. It also explains
+why `.home` hostnames can be flaky / ads leak (**the IPv6 DNS race**) and how to
+make them solid, plus the port gotcha: use `http://aladhan.home` (Traefik,
+port 80), not `:8000`.
 
 Freebox is automated via the local API:
 

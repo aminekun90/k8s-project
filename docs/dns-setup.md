@@ -125,10 +125,59 @@ dig @192.168.1.42 doubleclick.net +short    # blocked -> 0.0.0.0 / NXDOMAIN
 
 Then watch the live query log at `http://192.168.1.42/admin`.
 
+## `.home` hostnames flaky / ads still get through — the IPv6 DNS race
+
+Symptom: `http://aladhan.home` works one second and "can't resolve" the next,
+and some ads slip past Pi-hole.
+
+**Root cause** — devices get **two** DNS resolvers and race between them:
+
+| Family | Resolver | Knows `.home`? | Filters ads? |
+|-|-|-|-|
+| IPv4 | `192.168.1.44` (Pi-hole, via DHCP) | yes | yes |
+| IPv6 | `fd0f:ee:b0::1` (the Freebox itself, via RA/RDNSS) | **no** | **no** |
+
+When the IPv6 (Freebox) resolver answers first, `.home` returns NXDOMAIN and ad
+queries bypass Pi-hole entirely. Confirmed: querying Pi-hole directly is 10/10,
+but the macOS system resolver is 0/10 for `.home` while both nameservers are set.
+
+**Also note the port:** services are exposed by Traefik on **port 80** —
+use `http://aladhan.home`, not `http://aladhan.home:8000` (`:8000` is the raw
+service IP and bypasses the ingress).
+
+### Fixes
+
+1. **Per-device stopgap (macOS/iOS)** — force `*.home` to Pi-hole only:
+   ```bash
+   sudo mkdir -p /etc/resolver
+   echo "nameserver 192.168.1.44" | sudo tee /etc/resolver/home
+   sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
+   ```
+   Doesn't scale (per machine) — use a LAN-wide fix below.
+
+2. **LAN-wide — make Pi-hole the only resolver.** IPv4 is already done
+   (`freebox-dns.py --dns 192.168.1.44`). The IPv6 side is the problem:
+
+   - This cluster's **k3s is single-stack IPv4** (`service-cidr` is IPv4 only), so
+     you **cannot** give the `pihole-dns` Service an IPv6 via MetalLB without
+     rebuilding the cluster dual-stack. Don't do that for home DNS.
+   - **Option A (simplest, recommended): disable IPv6 on the Freebox.**
+     `Paramètres → Mode réseau / IPv6 → désactivé` (or API
+     `PUT /api/v8/connection/ipv6/config {"ipv6_enabled": false}`). Devices then
+     get only the IPv4 Pi-hole resolver → `.home` solid, ads filtered. Trade-off:
+     no IPv6 on the LAN (fine for a home LAN).
+   - **Option B (keep IPv6): a node-level IPv6 DNS forwarder.** Give the Pi a
+     static ULA (e.g. `fd0f:ee:b0::44`), run a tiny forwarder there
+     (`[fd0f:ee:b0::44]:53` → `192.168.1.44#53`), and set the Freebox DHCPv6
+     custom DNS to it (`PUT /api/v8/dhcpv6/config {"enabled": true,
+     "use_custom_dns": true, "dns": {...}}`). More moving parts, and **macOS/iOS
+     often prefer the RA/RDNSS resolver over DHCPv6**, so test that clients
+     actually pick it up before relying on it.
+
 ## Caveats (all methods)
 
-- **IPv6**: if your LAN hands out IPv6 DNS, devices may bypass Pi-hole. Disable
-  IPv6 DNS on the router, or give Pi-hole an IPv6 address.
+- **IPv6**: if your LAN hands out IPv6 DNS, devices may bypass Pi-hole — see the
+  IPv6 DNS race section above.
 - **DoH/DoT**: browsers/phones with "secure DNS" enabled ignore your LAN DNS.
   Turn that off per device for full coverage.
 - **Single point of failure**: if the Pi is down, DNS (and DHCP in Method 2)
