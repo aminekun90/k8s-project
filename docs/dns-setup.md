@@ -147,6 +147,15 @@ service IP and bypasses the ingress).
 
 ### Fixes
 
+### macOS quirk — apps can't resolve `.home` even when DNS is fine
+
+On macOS, `dig aladhan.home` works but **apps (curl, browsers) fail** — and
+normal domains (`google.com`) resolve fine. That's because `getaddrinfo` /
+`mDNSResponder` special-cases the made-up `.home` TLD and won't resolve it via
+the configured unicast servers reliably (it's not a network problem — `dig`
+proves DNS is fine). The fix is the per-device `/etc/resolver/home` below, or
+moving the local apps off `.home` to a domain macOS doesn't special-case.
+
 1. **Per-device stopgap (macOS/iOS)** — force `*.home` to Pi-hole only:
    ```bash
    sudo mkdir -p /etc/resolver
