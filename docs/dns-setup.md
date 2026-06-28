@@ -206,6 +206,26 @@ moving the local apps off `.home` to a domain macOS doesn't special-case.
      IPv6 prefix, re-read it and update the Freebox entry (rare, but it can
      happen on a full Freebox reset).
 
+## `.home` names suddenly all break (Traefik IP flipped)
+
+If every `.home` name stops responding ("No route to host" on the ingress IP)
+while DNS still resolves, the **Traefik LoadBalancer IP moved**. Cause: **k3s
+servicelb (klipper) and MetalLB both manage LoadBalancer services**. klipper
+binds the service port on the *node IP* and wins; MetalLB tries to assign a pool
+IP (e.g. `.43`). When the MetalLB speaker restarts, Traefik's external IP flips
+to the node IP — but the `localApps` DNS records still point at the old MetalLB
+IP, so every `.home` name resolves to a dead address.
+
+```bash
+kubectl -n kube-system get svc traefik   # EXTERNAL-IP is the node IP, not .43
+curl -H "Host: aladhan.home" http://<node-ip>/   # works -> Traefik is on the node IP
+```
+
+Fix: point `lanIngressIP` at the **node IP** (Traefik is always reachable there
+via klipper's hostPort) — done in `helm-charts/pihole/values.yaml`. Cleaner
+long-term fix: run only one LB controller — `k3s ... --disable servicelb` so
+MetalLB owns the pool (needs a k3s restart).
+
 ## Caveats (all methods)
 
 - **IPv6**: if your LAN hands out IPv6 DNS, devices may bypass Pi-hole — see the

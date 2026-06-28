@@ -77,7 +77,15 @@ unbound:
 #   - a traefik Ingress (host -> service:port) in the app's namespace
 # To add a new app: append one entry here and redeploy. Nothing else to touch.
 ingressClassName: traefik
-lanIngressIP: 192.168.1.43   # the traefik LoadBalancer IP (the HTTP entrypoint)
+# The HTTP entrypoint clients hit. Use the NODE IP (192.168.1.42), not a MetalLB
+# pool IP: k3s servicelb (klipper) and MetalLB BOTH manage LoadBalancer services,
+# and klipper wins by binding the service's port on the node IP. So Traefik is
+# reachable at <node-ip>:80 reliably, while its MetalLB IP (.43) flaps when the
+# speaker restarts — which silently breaks every .home name (records point at a
+# dead IP). Pointing at the node IP sidesteps the klipper/MetalLB conflict.
+# (Cleaner long-term fix: disable k3s servicelb with `--disable servicelb` so
+# MetalLB owns the pool — needs a k3s restart.)
+lanIngressIP: 192.168.1.42
 # Use .home hostnames (not .app/.hole): .app is HSTS-preloaded so browsers force
 # HTTPS and reject our cert; .home is plain HTTP everywhere, no cert needed.
 localApps:
