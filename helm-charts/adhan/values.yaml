@@ -28,7 +28,20 @@ keel:
   # In-cluster Keel admin API the app proxies to approve updates.
   url: http://keel.keel.svc.cluster.local:9300
 
+# The speaker half: Sonos/Freebox/Bluetooth discovery, and the scheduler that
+# plays the adhan on them. Off, the app mounts no device or audio routes and
+# starts no discovery — it serves prayer times and the mosque directory only.
+#
+# Leave it on here: this chart's default values describe the Raspberry Pi that
+# drives the speakers. The internet-facing deployment uses values-public.yaml,
+# where it is off — those routes control hardware and take no authentication,
+# which was defensible only while the LAN was the boundary.
+player:
+  enabled: true
+
 # hostNetwork is required for Sonos (SSDP) and Freebox (mDNS) LAN discovery.
+# Pointless without the player, and costly: it binds :8000 on the node and
+# forces the Recreate strategy (see deployment.yaml), so no zero-downtime roll.
 hostNetwork: true
 # When hostNetwork is on, keep cluster DNS working inside the pod.
 dnsPolicy: ClusterFirstWithHostNet
@@ -69,6 +82,27 @@ bluetooth:
 service:
   type: ClusterIP
   port: 8000
+
+# Off on the Pi: the LAN reaches it through the existing Traefik ingress for
+# aladhan.home, declared outside this chart. The public deployment turns it on.
+ingress:
+  enabled: false
+  className: traefik
+  host: ""
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: ""
+
+# Values the deployment must not carry in git: AUTH_SECRET, DB_PASSWORD.
+# Create the Secret out of band and name it here; every key in it is exported
+# into the container. Empty means the app falls back to its own defaults, which
+# is only ever right on the Pi.
+envSecret: ""
+
+# Extra plain environment variables, for the ones that are configuration rather
+# than credentials (DB_TYPE, DB_HOST, APP_ENV…).
+env: {}
 
 resources:
   requests:

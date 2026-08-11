@@ -1,0 +1,89 @@
+# The internet-facing deployment: backend of the qibla mobile apps and of the
+# mosque directory. Not the Raspberry Pi.
+#
+#   helm upgrade --install adhan-public ./helm-charts/adhan \
+#     -n adhan-public --create-namespace \
+#     -f helm-charts/adhan/values-public.yaml
+#
+# Before the first install, create the Secret this references — it is the one
+# thing that must not be in git:
+#
+#   kubectl -n adhan-public create secret generic adhan-api-env \
+#     --from-literal=AUTH_SECRET="$(python3 -c 'import secrets;print(secrets.token_hex(32))')" \
+#     --from-literal=DB_PASSWORD='…'
+#
+# AUTH_SECRET signs the imam sessions. Left unset the app generates one per
+# start, which signs every imam out on each restart and each rescheduled pod.
+
+# --- What this deployment is not ------------------------------------------
+# No speakers here. The device routes drive hardware and take no
+# authentication: on the LAN the router was the boundary, on the internet they
+# would be an open remote control.
+player:
+  enabled: false
+
+# All three exist only for the player. Without them the pod is unprivileged and
+# gets a normal rolling update instead of Recreate.
+hostNetwork: false
+audio:
+  enabled: false
+bluetooth:
+  enabled: false
+
+# Nothing to pin to: no sound card, no speakers' LAN segment.
+nodeSelector: {}
+
+# --- Updates ---------------------------------------------------------------
+# No approval gate: the "Approve" button lives in the player's About dialog,
+# which nobody watches on this deployment. Held images would simply never ship.
+keel:
+  enabled: true
+  policy: force
+  pollSchedule: "@every 1m"
+  approvals: 0
+
+# The force-update button belongs to the same UI. Without it the pod needs no
+# ServiceAccount that can patch its own Deployment.
+forceUpdate:
+  enabled: false
+
+# --- Exposure --------------------------------------------------------------
+ingress:
+  enabled: true
+  className: traefik
+  # Set to the real hostname before installing.
+  host: ""
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  tls:
+    enabled: true
+    secretName: adhan-api-tls
+
+# --- Data ------------------------------------------------------------------
+# Postgres, not SQLite: two replicas over one file is corruption, and the file
+# lives on whichever node the pod last ran on.
+env:
+  APP_ENV: production
+  DB_TYPE: postgres
+  DB_HOST: postgres.adhan-public.svc.cluster.local
+  DB_PORT: "5432"
+  DB_NAME: adhan_db
+  DB_USER: app
+  CLAIM_DOCUMENT_DIR: /app/var/claim-documents
+
+envSecret: adhan-api-env
+
+# Claim documents are uploaded proof: personal data, deleted 14 days after the
+# claim is decided. They must outlive the pod, so this needs a real volume
+# before imams start uploading — hostPath here would tie them to one node.
+dataPath: /home/pi/data
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 512Mi

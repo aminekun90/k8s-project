@@ -1,0 +1,34 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: adhan-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: adhan-api
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ required "ingress.host is required when the ingress is enabled" .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ required "ingress.host is required when the ingress is enabled" .Values.ingress.host | quote }}
+      http:
+        paths:
+          # One backend for everything: the API serves the SPA itself, and
+          # unknown /api/v1 paths 404 rather than falling through to the page.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: adhan-api
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}
