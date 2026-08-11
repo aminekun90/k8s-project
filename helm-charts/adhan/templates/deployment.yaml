@@ -16,10 +16,14 @@ metadata:
   {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  # hostNetwork binds port 8000 on the node, so a rolling update would deadlock
-  # (the new pod can't bind the port until the old one is gone). Recreate first.
   strategy:
+    {{- if .Values.hostNetwork }}
+    # hostNetwork binds port 8000 on the node, so a rolling update would deadlock
+    # (the new pod can't bind the port until the old one is gone). Recreate first.
     type: Recreate
+    {{- else }}
+    type: RollingUpdate
+    {{- end }}
   selector:
     matchLabels:
       app: adhan-api
@@ -49,10 +53,22 @@ spec:
           env:
             - name: TZ
               value: {{ .Values.timezone | quote }}
+            - name: PLAYER_ENABLED
+              value: {{ .Values.player.enabled | quote }}
             {{- if .Values.keel.enabled }}
             - name: KEEL_URL
               value: {{ .Values.keel.url | quote }}
             {{- end }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- with .Values.envSecret }}
+          # Credentials live in a Secret created out of band, never in git.
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
           {{- if or .Values.audio.enabled .Values.bluetooth.enabled }}
           securityContext:
             privileged: true  # access the host ALSA device / Bluetooth D-Bus
