@@ -10,10 +10,16 @@
 #
 #   kubectl -n adhan-public create secret generic adhan-api-env \
 #     --from-literal=AUTH_SECRET="$(python3 -c 'import secrets;print(secrets.token_hex(32))')" \
-#     --from-literal=DB_PASSWORD='…'
+#     --from-literal=DB_PASSWORD='…' \
+#     --from-literal=MOSQUE_API_KEYS="ios-app:$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))'),web:$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))')"
 #
 # AUTH_SECRET signs the imam sessions. Left unset the app generates one per
 # start, which signs every imam out on each restart and each rescheduled pod.
+#
+# MOSQUE_API_KEYS decides who may read the directory. Unset means open, which is
+# right on the Pi and wrong here. The `ios-app` key goes into the app; the `web`
+# one is served to the pages by /features and is public by nature. They are
+# separate so either can be revoked without breaking the other.
 
 # --- What this deployment is not ------------------------------------------
 # No speakers here. The device routes drive hardware and take no
