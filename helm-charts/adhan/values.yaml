@@ -102,7 +102,16 @@ envSecret: ""
 
 # Extra plain environment variables, for the ones that are configuration rather
 # than credentials (DB_TYPE, DB_HOST, APP_ENV…).
-env: {}
+env:
+  # This node serves the build `dev-local.sh` produces, so App Attest verifies
+  # against `WGF76DKK38.io.babikher.qibla.local` and accepts the development
+  # aaguid. Never on an internet-facing deployment: that attestation can be
+  # minted from any Xcode against any device.
+  APP_ENV: development
+  # Off until the iOS client implements DCAppAttestService. The server default
+  # is closed, so leaving this out would make /mosques/{uid}/calendar and
+  # /times stop answering the app the moment the new image lands here.
+  ATTEST_ENFORCED: "false"
 
 resources:
   requests:
