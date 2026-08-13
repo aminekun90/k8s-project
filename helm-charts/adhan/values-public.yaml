@@ -69,7 +69,16 @@ ingress:
 # Postgres, not SQLite: two replicas over one file is corruption, and the file
 # lives on whichever node the pod last ran on.
 env:
+  # Also selects the App Attest identity: production ⇒ the App Store App ID
+  # `LYZLY94CXN.io.babikher.qibla`, and development attestations refused.
   APP_ENV: production
+  # The gate in front of the heavy directory routes. `/calendar` returns a whole
+  # year per call, so 3100 requests copy the directory — a quota cannot tell
+  # that from normal use, because it is the same call.
+  #
+  # ⚠️ Turn this on only once the iOS client attests. Until then it refuses
+  # every device, the app included.
+  ATTEST_ENFORCED: "true"
   DB_TYPE: postgres
   DB_HOST: postgres.adhan-public.svc.cluster.local
   DB_PORT: "5432"
