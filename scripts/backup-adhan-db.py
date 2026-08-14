@@ -14,9 +14,15 @@ Deux natures de données, donc deux cadences :
     ./backup-adhan-db.py --static
     ./backup-adhan-db.py --list
 
-Le snapshot passe par l'API `backup()` de SQLite, pas par une copie de fichier :
-la base est ouverte en écriture par l'application pendant l'opération, et copier
-le fichier sous elle produirait une archive corrompue en silence.
+La base est lue en `mode=ro` dans une transaction, **jamais copiée** : une
+version antérieure la dupliquait en RAM via `backup()`, soit 1,6 Go sur une Pi
+qui en a 1,8 de libre à côté de k3s. Et jamais `cp` non plus — l'application
+écrit pendant l'opération, et copier le fichier sous elle produirait une archive
+corrompue en silence.
+
+⚠️ Tâche cron **désactivée** le 2026-08-14 : la Pi est un environnement de test
+contraint en mémoire. La réactiver avec
+`30 3 * * * /usr/bin/sudo /home/pi/backup-adhan-db.py --daily`.
 
 ⚠️ Ces archives vivent sur la même carte SD que la base. Elles protègent d'une
 suppression ou d'une corruption, **pas de la mort de la carte**. Une copie hors
@@ -138,16 +144,20 @@ def backup_static() -> None:
 # --- Outils ------------------------------------------------------------------
 
 def snapshot() -> sqlite3.Connection:
-    """Une copie cohérente, prise pendant que l'application écrit.
+    """Lecture seule, dans une transaction, **sans copier la base**.
 
-    `backup()` traverse le verrou de SQLite correctement ; `cp` ne le fait pas
-    et produit une archive que rien ne signale comme cassée avant la restauration.
+    Une première version copiait tout via `backup()` vers `:memory:` — soit
+    1,6 Go de RAM sur une Pi qui en a 1,8 de libre à côté de k3s, pour en
+    extraire 942 Ko. Le tueur OOM aurait fini par emporter le cluster.
+
+    `mode=ro` plus une transaction différée suffisent : les tables sauvegardées
+    tiennent en quelques milliers de lignes, elles sont lues d'un bloc, et
+    SQLite garantit la cohérence de cette lecture même pendant que
+    l'application écrit.
     """
     source = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
-    memory = sqlite3.connect(":memory:")
-    source.backup(memory)
-    source.close()
-    return memory
+    source.execute("BEGIN DEFERRED")
+    return source
 
 
 def tables_in(connection: sqlite3.Connection) -> list[str]:
