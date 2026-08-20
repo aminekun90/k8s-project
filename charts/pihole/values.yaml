@@ -14,7 +14,7 @@ timezone: Europe/Paris
 #      then set: existingSecret: pihole-admin
 #   B) Let the chart create the Secret from `adminPassword`. Don't commit the
 #      real value — pass it at install time, e.g.:
-#        helm upgrade --install pihole ./helm-charts/pihole -n pihole --set adminPassword='YOURPASS'
+#        helm upgrade --install pihole ./charts/pihole -n pihole --set adminPassword='YOURPASS'
 adminPassword: ""
 existingSecret: ""        # name of a pre-created Secret holding the password
 existingSecretKey: password

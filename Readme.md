@@ -8,30 +8,21 @@ This project deploys a **Pi-hole + Unbound DNS** stack and an **Adhan API** on a
 
 ```bash
 .
-├── helm-charts
-│   ├── adhan
-│   │   ├── Chart.yaml
-│   │   ├── templates
-│   │   │   ├── adhan-service.yaml
-│   │   │   └── deployment.yaml
-│   │   └── values.yaml
-│   └── pihole
-│       ├── Chart.yaml
-│       ├── templates
-│       │   ├── _helpers.tpl
-│       │   ├── pihole-deployment.yaml
-│       │   ├── pihole-pvc.yaml
-│       │   ├── pihole-secret.yaml
-│       │   ├── pihole-service.yaml
-│       │   ├── unbound-configmap.yaml
-│       │   ├── unbound-deployment.yaml
-│       │   └── unbound-service.yaml
-│       └── values.yaml
-├── metallb-pool.yaml
-├── namespaces
-│   ├── adhan-namespace.yaml
-│   └── pihole-namespace.yaml
-└── pihole-ingress.yaml
+├── charts/                 # ce qu'on déploie — aucun chart ne suppose une cible
+│   ├── aladhan/            #   portable : Pi, VPS, k8s managé
+│   ├── pihole/             #   assume la Raspberry Pi, et l'assume explicitement
+│   └── increaser/
+├── clusters/               # où on le déploie
+│   ├── pi/                 #   la Raspberry Pi : GitOps + réseau du LAN
+│   │   ├── argocd/         #     root.yaml (App-of-Apps) + apps/
+│   │   ├── namespaces/
+│   │   ├── node-dns/       #     dnsmasq du nœud, en amont de Pi-hole
+│   │   └── metallb-pool.yaml
+│   └── cloud/              #   la cible internet
+│       └── values/aladhan.yaml
+├── docs/
+├── scripts/
+└── deploy.sh
 ```
 
 ---
@@ -49,7 +40,7 @@ This project deploys a **Pi-hole + Unbound DNS** stack and an **Adhan API** on a
 ## Step 1: Install MetalLB
 
 ```bash
-kubectl apply -f metallb-pool.yaml
+kubectl apply -f clusters/pi/metallb-pool.yaml
 ```
 
 Make sure MetalLB assigns IPs in your local network range.
@@ -59,8 +50,8 @@ Make sure MetalLB assigns IPs in your local network range.
 ## Step 2: Create Namespaces
 
 ```bash
-kubectl apply -f namespaces/pihole-namespace.yaml
-kubectl apply -f namespaces/adhan-namespace.yaml
+kubectl apply -f clusters/pi/namespaces/pihole-namespace.yaml
+kubectl apply -f clusters/pi/namespaces/adhan-namespace.yaml
 ```
 
 ---
@@ -72,10 +63,10 @@ The admin password is stored in a Kubernetes Secret (never in git). Pick one:
 ```bash
 # Recommended — create the Secret once; it survives every helm upgrade:
 kubectl -n pihole create secret generic pihole-admin --from-literal=password='YOURPASS'
-helm upgrade --install pihole helm-charts/pihole -n pihole --set existingSecret=pihole-admin
+helm upgrade --install pihole charts/pihole -n pihole --set existingSecret=pihole-admin
 
 # Or let the chart create the Secret (pass the password at install time):
-helm upgrade --install pihole helm-charts/pihole -n pihole --set adminPassword='YOURPASS'
+helm upgrade --install pihole charts/pihole -n pihole --set adminPassword='YOURPASS'
 ```
 
 Check pods and services:
@@ -108,7 +99,7 @@ scp -r backend/src/data pi@192.168.1.42:/home/pi/data
 Deploy the Adhan API:
 
 ```bash
-helm install adhan helm-charts/adhan -n adhan
+helm install adhan charts/aladhan -n adhan
 ```
 
 Check pods and services:
@@ -164,8 +155,8 @@ Monitor Pi-hole, Unbound, and Adhan API pods in real-time.
 To upgrade Pi-hole or Adhan:
 
 ```bash
-helm upgrade pihole helm-charts/pihole -n pihole
-helm upgrade adhan helm-charts/adhan -n adhan
+helm upgrade pihole charts/pihole -n pihole
+helm upgrade adhan charts/aladhan -n adhan
 ```
 
 ---
@@ -179,7 +170,7 @@ keeps the cluster on the newest images — no manual rollout, no inbound port
 - **Adhan** runs `:latest` with `keel.sh/approvals: "1"` → a new image becomes a
   **pending approval** instead of deploying. You approve it **from the Adhan app**
   (About dialog → *Approve update*), which proxies the Keel admin API
-  (`KEEL_URL`). Set `keel.approvals: 0` in `helm-charts/adhan/values.yaml` for
+  (`KEEL_URL`). Set `keel.approvals: 0` in `charts/aladhan/values.yaml` for
   fully automatic updates.
 - **Increaser** is a CronJob (`:latest` + `pullPolicy: Always`) that re-pulls the
   latest image on every scheduled run — no watcher needed.
@@ -200,7 +191,7 @@ Layout (App-of-Apps):
 
 ```
 argocd/
-├── root.yaml          # watches argocd/apps/, auto-registers child apps
+├── root.yaml          # watches clusters/pi/argocd/apps/, auto-registers child apps
 └── apps/
     ├── pihole.yaml    # auto-sync
     ├── adhan.yaml     # auto-sync; ignores image drift (managed by Keel)
@@ -208,11 +199,11 @@ argocd/
 ```
 
 `deploy.sh` installs Argo CD and registers the **selected** apps (it applies
-just the chosen `argocd/apps/*.yaml`). Apps **auto-sync**, so the cluster follows
+just the chosen `clusters/pi/argocd/apps/*.yaml`). Apps **auto-sync**, so the cluster follows
 git automatically. Adhan **image** updates still require approval (Keel → approve
 from the Adhan app); only chart/manifest changes auto-apply.
 
-Apply `argocd/root.yaml` instead if you want the App-of-Apps to install
+Apply `clusters/pi/argocd/root.yaml` instead if you want the App-of-Apps to install
 **everything** at once.
 
 UI: `http://argocd.home` (exposed via the Pi-hole `localApps` ingress).
@@ -266,7 +257,7 @@ For other ISPs/routers, either set the DHCP DNS in the box UI, or enable
 Pi-hole's own DHCP server:
 
 ```bash
-helm upgrade --install pihole helm-charts/pihole -n pihole \
+helm upgrade --install pihole charts/pihole -n pihole \
   --set existingSecret=pihole-admin --set dhcp.enabled=true \
   --set dhcp.router=192.168.1.254   # disable the router's DHCP first
 ```

@@ -1,9 +1,9 @@
 # The internet-facing deployment: backend of the qibla mobile apps and of the
 # mosque directory. Not the Raspberry Pi.
 #
-#   helm upgrade --install adhan-public ./helm-charts/adhan \
+#   helm upgrade --install adhan-public ./charts/aladhan \
 #     -n adhan-public --create-namespace \
-#     -f helm-charts/adhan/values-public.yaml
+#     -f clusters/cloud/values/aladhan.yaml
 #
 # Before the first install, create the Secret this references — it is the one
 # thing that must not be in git:

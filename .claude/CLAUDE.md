@@ -6,7 +6,7 @@ Kubernetes infrastructure configuration (IaC) for a Raspberry Pi k3s home cluste
 ## Project Structure
 ```
 k8s-project/
-├── helm-charts/
+├── charts/
 │   ├── adhan/          # Adhan API Helm chart
 │   └── pihole/         # Pi-hole + Unbound chart
 ├── namespaces/         # Namespace manifests
@@ -24,7 +24,7 @@ k8s-project/
 ## Commands
 ```bash
 # Apply a Helm chart
-helm upgrade --install adhan ./helm-charts/adhan -n adhan
+helm upgrade --install adhan ./charts/aladhan -n adhan
 
 # Apply raw manifests
 kubectl apply -f namespaces/
@@ -58,7 +58,7 @@ helm rollback adhan -n adhan
 
 ## Helm Chart Structure (adhan)
 ```
-helm-charts/adhan/
+charts/aladhan/
 ├── Chart.yaml       # Chart metadata (version: 0.1.0)
 ├── values.yaml      # Default values
 └── templates/       # K8s manifest templates

@@ -14,7 +14,7 @@ device ─DNS→ Pi-hole (192.168.1.42) ─→ Unbound (recursive) ─→ root D
 | 3. Per-device DNS | Any single device | Per device |
 
 Pi-hole's IP is the MetalLB LoadBalancer address (`192.168.1.42` by default —
-see `helm-charts/pihole/values.yaml`). Confirm it:
+see `charts/pihole/values.yaml`). Confirm it:
 
 ```bash
 kubectl -n pihole get svc pihole-dns
@@ -86,7 +86,7 @@ router, anywhere.
 2. Enable Pi-hole DHCP and redeploy:
 
    ```bash
-   helm upgrade --install pihole helm-charts/pihole -n pihole \
+   helm upgrade --install pihole charts/pihole -n pihole \
      --set existingSecret=pihole-admin \
      --set dhcp.enabled=true \
      --set dhcp.start=192.168.1.100 \
@@ -96,7 +96,7 @@ router, anywhere.
 
    This switches the Pi-hole pod to `hostNetwork` (needed to receive DHCP
    broadcasts) and turns on its DHCP server. Adjust the range/gateway to your
-   LAN in `helm-charts/pihole/values.yaml`.
+   LAN in `charts/pihole/values.yaml`.
 
 3. Renew a device's lease and confirm it got an IP in your range with DNS =
    Pi-hole.
@@ -222,7 +222,7 @@ curl -H "Host: aladhan.home" http://<node-ip>/   # works -> Traefik is on the no
 ```
 
 Fix: point `lanIngressIP` at the **node IP** (Traefik is always reachable there
-via klipper's hostPort) — done in `helm-charts/pihole/values.yaml`. Cleaner
+via klipper's hostPort) — done in `charts/pihole/values.yaml`. Cleaner
 long-term fix: run only one LB controller — `k3s ... --disable servicelb` so
 MetalLB owns the pool (needs a k3s restart).
 
