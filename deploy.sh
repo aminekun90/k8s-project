@@ -61,8 +61,8 @@ echo "==> Installing: $COMPONENTS"
 
 # --- Namespaces --------------------------------------------------------------
 echo "==> Namespaces"
-want pihole    && kubectl apply -f namespaces/pihole-namespace.yaml
-want adhan     && kubectl apply -f namespaces/adhan-namespace.yaml
+want pihole    && kubectl apply -f clusters/pi/namespaces/pihole-namespace.yaml
+want adhan     && kubectl apply -f clusters/pi/namespaces/adhan-namespace.yaml
 if want increaser; then
   kubectl get ns "$INCREASER_NS" >/dev/null 2>&1 || kubectl create namespace "$INCREASER_NS"
 fi
@@ -77,7 +77,7 @@ if want pihole || want adhan; then
     kubectl -n metallb-system wait --for=condition=ready pod -l component=controller --timeout=120s || true
   fi
   # Retry the pool apply: the validating webhook can take a moment to be ready.
-  for _ in 1 2 3 4 5; do kubectl apply -f metallb-pool.yaml && break || sleep 5; done
+  for _ in 1 2 3 4 5; do kubectl apply -f clusters/pi/metallb-pool.yaml && break || sleep 5; done
 fi
 
 # --- Pi-hole admin password Secret -------------------------------------------
@@ -122,15 +122,15 @@ if [ "$ARGOCD_ENABLED" = "true" ]; then
     kubectl -n argocd rollout restart deploy/argocd-server >/dev/null 2>&1 || true
   fi
   echo "    Registering selected apps (auto-sync)"
-  want pihole    && kubectl apply -f argocd/apps/pihole.yaml
-  want adhan     && kubectl apply -f argocd/apps/adhan.yaml
-  want increaser && kubectl apply -f argocd/apps/increaser.yaml
+  want pihole    && kubectl apply -f clusters/pi/argocd/apps/pihole.yaml
+  want adhan     && kubectl apply -f clusters/pi/argocd/apps/adhan.yaml
+  want increaser && kubectl apply -f clusters/pi/argocd/apps/increaser.yaml
   echo "    Argo CD UI: http://argocd.home"
   echo "    Admin password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
 else
   if want pihole; then
     echo "==> Deploying Pi-hole + Unbound (helm)"
-    helm upgrade --install pihole helm-charts/pihole -n "$PIHOLE_NS" --set existingSecret="$PIHOLE_SECRET"
+    helm upgrade --install pihole charts/pihole -n "$PIHOLE_NS" --set existingSecret="$PIHOLE_SECRET"
   fi
   if want adhan; then
     echo "==> Deploying Adhan API (helm)"
@@ -139,11 +139,11 @@ else
       echo "    Pinning Adhan to node '$ADHAN_NODE'"
       ADHAN_ARGS+=(--set "nodeSelector.kubernetes\.io/hostname=$ADHAN_NODE")
     fi
-    helm upgrade --install adhan helm-charts/adhan -n "$ADHAN_NS" ${ADHAN_ARGS[@]+"${ADHAN_ARGS[@]}"}
+    helm upgrade --install adhan charts/aladhan -n "$ADHAN_NS" ${ADHAN_ARGS[@]+"${ADHAN_ARGS[@]}"}
   fi
   if want increaser; then
     echo "==> Deploying Increaser (helm)"
-    helm upgrade --install increaser helm-charts/increaser -n "$INCREASER_NS" --create-namespace
+    helm upgrade --install increaser charts/increaser -n "$INCREASER_NS" --create-namespace
   fi
 fi
 

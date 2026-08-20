@@ -22,27 +22,33 @@ jobs:
 
       - name: Lint charts
         run: |
-          helm lint helm-charts/adhan
-          helm lint helm-charts/pihole --set adminPassword=ci-dummy
-          helm lint helm-charts/increaser
+          helm lint charts/aladhan
+          helm lint charts/pihole --set adminPassword=ci-dummy
+          helm lint charts/increaser
 
       - name: Render templates (must succeed)
         run: |
-          helm template adhan helm-charts/adhan -n adhan > /dev/null
-          helm template pihole helm-charts/pihole -n pihole --set adminPassword=ci-dummy > /dev/null
+          helm template aladhan charts/aladhan -n adhan > /dev/null
+          # The portable target: the cloud values must render too. ingress.host is
+          # deliberately empty there (it is site-specific and `required` guards
+          # it), so feed a dummy one rather than weakening the guard.
+          helm template aladhan charts/aladhan -n adhan \
+            -f clusters/cloud/values/aladhan.yaml \
+            --set ingress.host=example.invalid > /dev/null
+          helm template pihole charts/pihole -n pihole --set adminPassword=ci-dummy > /dev/null
           # Also exercise the optional Pi-hole DHCP path.
-          helm template pihole helm-charts/pihole -n pihole \
+          helm template pihole charts/pihole -n pihole \
             --set adminPassword=ci-dummy --set dhcp.enabled=true > /dev/null
-          helm template increaser helm-charts/increaser -n increaser > /dev/null
+          helm template increaser charts/increaser -n increaser > /dev/null
 
       - name: Validate manifests against the Kubernetes schema
         run: |
           curl -fsSL -o /tmp/kubeconform.tar.gz \
             https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
           tar -xzf /tmp/kubeconform.tar.gz -C /tmp
-          for chart in adhan pihole increaser; do
+          for chart in aladhan pihole increaser; do
             args=""
             [ "$chart" = "pihole" ] && args="--set adminPassword=ci-dummy"
-            helm template "$chart" "helm-charts/$chart" -n "$chart" $args \
+            helm template "$chart" "charts/$chart" -n "$chart" $args \
               | /tmp/kubeconform -strict -ignore-missing-schemas -summary
           done

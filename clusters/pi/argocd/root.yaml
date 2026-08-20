@@ -1,7 +1,7 @@
-# App-of-Apps: installs EVERYTHING. This root Application watches argocd/apps/
+# App-of-Apps: installs EVERYTHING. This root Application watches clusters/pi/argocd/apps/
 # and registers every child Application found there (pihole, adhan, increaser).
 # Apply this only if you want all components. For a selective install, use
-# deploy.sh (it applies just the chosen argocd/apps/*.yaml). Child apps auto-sync.
+# deploy.sh (it applies just the chosen clusters/pi/argocd/apps/*.yaml). Child apps auto-sync.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -14,7 +14,7 @@ spec:
   source:
     repoURL: https://github.com/aminekun90/k8s-project.git
     targetRevision: main
-    path: argocd/apps
+    path: clusters/pi/argocd/apps
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

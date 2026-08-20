@@ -1,4 +1,4 @@
-# helm-charts/pihole/Chart.yaml
+# charts/pihole/Chart.yaml
 apiVersion: v2
 name: pihole
 description: Pi-hole v6.4 with Unbound (recursive DNS)
