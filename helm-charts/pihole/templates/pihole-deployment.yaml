@@ -45,6 +45,13 @@ spec:
               value: {{ .Values.upstreamDns | quote }}
             - name: FTLCONF_dns_listeningMode
               value: "all"
+            # Env wins over pihole.toml on every start, so this re-asserts the
+            # declared limit even if someone set it live with `pihole-FTL
+            # --config` (that writes to the PVC and would otherwise persist).
+            - name: FTLCONF_dns_rateLimit_count
+              value: {{ .Values.rateLimitCount | quote }}
+            - name: FTLCONF_dns_rateLimit_interval
+              value: {{ .Values.rateLimitInterval | quote }}
             {{- if .Values.localApps }}
             # Let Pi-hole load custom records from /etc/dnsmasq.d (local DNS).
             - name: FTLCONF_misc_etc_dnsmasq_d

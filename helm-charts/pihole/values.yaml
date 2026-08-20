@@ -50,6 +50,29 @@ service:
     type: LoadBalancer
     loadBalancerIP: 192.168.1.44
     port: 53
+    # MUST stay "Local". Without it, k3s klipper (svclb) proxies DNS and SNATs
+    # every packet, so Pi-hole sees the WHOLE LAN as one client (10.42.0.1, the
+    # cni0 bridge). FTL's per-client rate limit then applies to that aggregate:
+    # one chatty device trips it and FTL answers REFUSED to 10.42.0.1 — i.e. to
+    # every device in the house. That is what happened on 2026-08-20 (see
+    # docs/findings-2026-08-dns-outage.md): 45-52s DNS blackouts, LAN-wide, for
+    # days, and the real client was invisible in the query log because every
+    # query carried the same source IP.
+    # Setting Local makes k3s drop its svclb DaemonSet for this service (klipper
+    # does not support Local), leaving MetalLB layer2 to announce .44 on its own
+    # — which preserves the client source IP. Single-node cluster, so "Local"
+    # never black-holes traffic: the pod is always on the announcing node.
+    externalTrafficPolicy: Local
+
+# FTL refuses further queries from a client that exceeds `rateLimitCount`
+# queries per `rateLimitInterval` seconds. Declared here rather than left to the
+# image default so git stays the source of truth: the value also lives in
+# pihole.toml on the PVC, where a manual `pihole-FTL --config` would silently
+# outlive any redeploy. Only safe because service.dns.externalTrafficPolicy is
+# Local — under SNAT this limit punishes the whole LAN instead of the offender.
+# 0 disables it.
+rateLimitCount: 1000
+rateLimitInterval: 60
 
 persistence:
   enabled: true
