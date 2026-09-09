@@ -81,8 +81,29 @@ service:
 # outlive any redeploy. Only safe because service.dns.externalTrafficPolicy is
 # Local — under SNAT this limit punishes the whole LAN instead of the offender.
 # 0 disables it.
-rateLimitCount: 1000
+#
+# Raised from 1000 to 5000 on 2026-09-09. A work laptop tripped the old limit
+# (1150 queries in the minute of 2026-09-08 22:33) and FTL then answered REFUSED
+# to that client for 35 s — every domain, so Jira and the Zscaler tunnel died
+# together. The volume is not the user's doing: 43% of that machine's queries are
+# blocked corporate telemetry (Teams, Sentry, Datadog, Splunk), and a blocked
+# domain answers instantly, so the client retries instantly — the amplification
+# trap already documented in docs/findings-2026-08-dns-outage.md.
+# 1000/60 is simply too low for a busy workstation. The limit stays on as a
+# runaway backstop, not as a traffic shaper.
+rateLimitCount: 5000
 rateLimitInterval: 60
+
+# Domains force-allowed at every start, whatever the gravity blocklists say.
+# Declared here rather than added live with `pihole allow`: that writes to the
+# gravity DB on the PVC only, so it survives redeploys invisibly and git stops
+# describing what the resolver actually does.
+allowlist:
+  # Atlassian's experiment/feature-flag platform. Jira's frontend awaits its
+  # response before finishing render, so blocking it leaves the page half-loaded
+  # with missing images — which reads exactly like a broken VPN or proxy. Present
+  # on several tracker blocklists; a well-known false positive.
+  - xp.atlassian.com
 
 persistence:
   enabled: true

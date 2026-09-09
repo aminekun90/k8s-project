@@ -85,6 +85,26 @@ spec:
             - name: FTLCONF_dhcp_ipv6
               value: {{ .Values.dhcp.ipv6 | quote }}
             {{- end }}
+          {{- if .Values.allowlist }}
+          # `pihole allow` writes to the gravity DB on the PVC, so it cannot be
+          # expressed as env config — this re-asserts the declared allowlist on
+          # every start, keeping git the source of truth. Retried because FTL
+          # needs a moment before the DB accepts writes, and swallowed at the end
+          # on purpose: a failing postStart kills the container, and no allowlist
+          # entry is worth taking the LAN's resolver down for.
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - |
+                    for i in $(seq 1 30); do
+                      pihole allow {{ join " " .Values.allowlist }} && exit 0
+                      sleep 2
+                    done
+                    exit 0
+          {{- end }}
           volumeMounts:
             - name: data
               mountPath: /etc/pihole
