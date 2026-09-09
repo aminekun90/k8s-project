@@ -48,7 +48,12 @@ service:
     port: 80
   dns:
     type: LoadBalancer
+    # Rendered as the `metallb.io/loadBalancerIPs` annotation, NOT as
+    # spec.loadBalancerIP: MetalLB >= 0.13 ignores that deprecated field. The
+    # pool is single-address and autoAssign:false (clusters/pi/metallb-pool.yaml)
+    # so this annotation is the only way .44 is ever handed out.
     loadBalancerIP: 192.168.1.44
+    addressPool: pihole-pool
     port: 53
     # MUST stay "Local". Without it, k3s klipper (svclb) proxies DNS and SNATs
     # every packet, so Pi-hole sees the WHOLE LAN as one client (10.42.0.1, the
@@ -58,10 +63,15 @@ service:
     # docs/findings-2026-08-dns-outage.md): 45-52s DNS blackouts, LAN-wide, for
     # days, and the real client was invisible in the query log because every
     # query carried the same source IP.
-    # Setting Local makes k3s drop its svclb DaemonSet for this service (klipper
-    # does not support Local), leaving MetalLB layer2 to announce .44 on its own
-    # — which preserves the client source IP. Single-node cluster, so "Local"
-    # never black-holes traffic: the pod is always on the announcing node.
+    # Local preserves the client source IP, which is what makes the per-client
+    # rate limit target the offender instead of the whole house.
+    #
+    # CORRECTION (2026-09-09): the claim that k3s drops its svclb DaemonSet for a
+    # Local service is no longer true — k3s v1.34 supports externalTrafficPolicy
+    # Local in klipper, and `svclb-pihole-dns` is running. It is harmless here
+    # (source IPs do reach the query log, verified in the rate-limit entries) but
+    # do not rely on svclb being absent. Single-node cluster, so "Local" never
+    # black-holes traffic: the pod is always on the announcing node.
     externalTrafficPolicy: Local
 
 # FTL refuses further queries from a client that exceeds `rateLimitCount`

@@ -1,11 +1,38 @@
+# One pool per service, each holding a single address, all with autoAssign
+# disabled. A service gets an address only by naming it through the
+# `metallb.io/loadBalancerIPs` annotation.
+#
+# Why not one shared 192.168.1.42-44 range: MetalLB ignores the deprecated
+# `spec.loadBalancerIP` field, so with a shared auto-assigning pool it was free
+# to hand pihole-dns the first address in the range (.42) — already taken by
+# traefik. It then hit "can't change sharing key", cleared the assignment and
+# fell back to .44. Every one of those cycles withdraws the layer2 ARP
+# announcement for .44, and the Freebox forwards the whole LAN's DNS there:
+# each reconcile became a house-wide DNS outage. Triggered by any service
+# reconcile, notably k3s re-applying its bundled traefik HelmChart on restart.
+#
+# autoAssign: false is deliberate. If an annotation is ever lost, the service
+# gets no address at all — loud and obvious — instead of silently stealing the
+# resolver's IP.
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
   name: pihole-pool
   namespace: metallb-system
 spec:
+  autoAssign: false
   addresses:
-  - 192.168.1.42-192.168.1.44
+  - 192.168.1.44/32
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: traefik-pool
+  namespace: metallb-system
+spec:
+  autoAssign: false
+  addresses:
+  - 192.168.1.42/32
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
@@ -15,3 +42,4 @@ metadata:
 spec:
   ipAddressPools:
   - pihole-pool
+  - traefik-pool

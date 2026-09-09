@@ -18,6 +18,24 @@ spec:
           image: {{ .Values.unbound.image }}
           ports:
             - containerPort: {{ .Values.unbound.port }}
+          # Nothing restarted unbound when it stopped answering: it has no
+          # probes, so a hung (as opposed to crashed) resolver stayed Ready
+          # forever while Pi-hole kept forwarding into the void. Pi-hole has a
+          # single upstream, so that is the whole LAN losing DNS with a green
+          # pod. tcpSocket rather than a real query on purpose — a liveness
+          # probe that false-positives would restart the resolver and cause the
+          # outage it is meant to prevent.
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.unbound.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.unbound.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 3
           volumeMounts:
             - name: unbound-config
               mountPath: /etc/unbound/custom.conf.d/custom.conf

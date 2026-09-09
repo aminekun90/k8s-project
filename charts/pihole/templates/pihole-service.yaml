@@ -3,11 +3,17 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pihole-dns
+  {{- if .Values.service.dns.loadBalancerIP }}
+  annotations:
+    # MetalLB ignores the deprecated spec.loadBalancerIP field; the annotation is
+    # the only thing that pins the address. Without it MetalLB auto-assigns from
+    # the pool, collides with traefik and re-announces .44 — a LAN-wide DNS
+    # outage on every reconcile.
+    metallb.io/loadBalancerIPs: {{ .Values.service.dns.loadBalancerIP | quote }}
+    metallb.io/address-pool: {{ .Values.service.dns.addressPool | quote }}
+  {{- end }}
 spec:
   type: {{ .Values.service.dns.type }}
-  {{- if .Values.service.dns.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.service.dns.loadBalancerIP }}
-  {{- end }}
   {{- if .Values.service.dns.externalTrafficPolicy }}
   externalTrafficPolicy: {{ .Values.service.dns.externalTrafficPolicy }}
   {{- end }}

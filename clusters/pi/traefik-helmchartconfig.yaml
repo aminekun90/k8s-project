@@ -1,0 +1,21 @@
+# Pins traefik's LoadBalancer address the same way pihole-dns pins its own.
+#
+# k3s ships traefik as a bundled HelmChart and RE-APPLIES it on every k3s
+# restart. That re-apply recreated the Service, MetalLB re-reconciled both
+# LoadBalancers against a shared auto-assigning pool, and pihole-dns lost its
+# .44 announcement for the duration — the LAN-wide DNS drop. Pinning both ends
+# removes the contention instead of racing it.
+#
+# HelmChartConfig (not HelmChart) so k3s merges these values into its own chart
+# definition; editing the bundled HelmChart directly is overwritten on restart.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      annotations:
+        metallb.io/loadBalancerIPs: "192.168.1.42"
+        metallb.io/address-pool: "traefik-pool"
