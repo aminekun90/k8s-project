@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Pi-hole health and switch the node's DNS upstream if needed
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=20s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

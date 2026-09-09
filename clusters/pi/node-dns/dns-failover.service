@@ -1,0 +1,8 @@
+[Unit]
+Description=Health-checked DNS failover for the node's dnsmasq
+After=network-online.target dnsmasq.service
+Wants=dnsmasq.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/dns-failover.sh
