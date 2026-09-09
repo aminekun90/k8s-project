@@ -147,9 +147,13 @@ else
   fi
 fi
 
-# Local DNS records + traefik Ingress (pihole.home, aladhan.home, argocd.home,
-# ...) come from `localApps` in the Pi-hole chart values — install Pi-hole to
-# get them.
+# Local DNS records for the .home hostnames come from `localApps` in the Pi-hole
+# chart values — install Pi-hole to get them, since Pi-hole is the resolver.
+#
+# The Ingress is a separate matter: an app that ships its own chart declares its
+# own Ingress there (adhan does, via ingress.enabled) and its entry here sets
+# `ingress: false`. Such an app deploys, upgrades and is removed without Pi-hole
+# being involved — only its name resolution depends on it.
 
 # Optional: point the Freebox Pop DHCP at Pi-hole so every device uses it.
 if want pihole && [ -n "${FREEBOX_DNS_IP:-}" ]; then
