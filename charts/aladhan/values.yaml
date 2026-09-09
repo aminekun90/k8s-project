@@ -83,12 +83,15 @@ service:
   type: ClusterIP
   port: 8000
 
-# Off on the Pi: the LAN reaches it through the existing Traefik ingress for
-# aladhan.home, declared outside this chart. The public deployment turns it on.
+# On: this chart owns the LAN Ingress for aladhan.home. It used to be declared
+# in the Pi-hole chart's `localApps`, which meant Pi-hole created an Ingress in
+# the adhan namespace and the API could not be deployed without it. Pi-hole now
+# only serves the DNS record for the host, which is unavoidable — it is the
+# resolver. The public deployment overrides host/tls in values-public.yaml.
 ingress:
-  enabled: false
+  enabled: true
   className: traefik
-  host: ""
+  host: aladhan.home
   annotations: {}
   tls:
     enabled: false
