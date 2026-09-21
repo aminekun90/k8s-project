@@ -115,11 +115,49 @@ env:
   # is closed, so leaving this out would make /mosques/{uid}/calendar and
   # /times stop answering the app the moment the new image lands here.
   ATTEST_ENFORCED: "false"
+  # glibc gives each thread its own malloc arena, and each arena keeps its own
+  # heap. This service is thoroughly threaded — AnyIO workers, the APScheduler
+  # that plays the adhan, the daemon threads the OSM import starts — so resident
+  # memory grows with thread count while the code allocates no more than before.
+  #
+  # Capping the arenas trades a little allocator contention for that space. The
+  # image is Debian bookworm (glibc 2.36), verified in the running container, so
+  # the variable is actually read — on a musl image it would be silently inert.
+  #
+  # ⚠️ The gain is reported at 10–30 % elsewhere; **it has not been measured
+  # here**. Read `memory.current` before and after the first sync rather than
+  # trusting the range.
+  MALLOC_ARENA_MAX: "2"
 
+# Raised from 128Mi/256Mi on 2026-09-21, after measuring rather than guessing.
+#
+# The old ceiling was not merely tight, it was **being hit**: `dmesg` carries
+# three OOM kills of `uvicorn` — 1 Sep 17:32, 1 Sep 17:40, 6 Sep 00:39 — each at
+# an anon-rss around 248 MB, with `constraint=CONSTRAINT_MEMCG`. That last word
+# is the whole point: the node was never short of memory, the cgroup ceiling was
+# simply lower than what the process does. The pod then sat at 246Mi of 256Mi,
+# ten megabytes from the next kill.
+#
+# Where the ~180Mi floor goes, measured by import: 31 fastapi, 23 SQLAlchemy
+# models, 15 interpreter, and the rest the API package — whose `__init__`
+# imports every router, so soco, zeroconf, bluetooth and cryptography come along
+# even to serve a prayer time. That is the cost of assembling this application,
+# not a leak, and no reasonable optimisation brings it comfortably under 256Mi.
+#
+# A 38Mi spike on top of it *was* a defect and is fixed separately: listing the
+# audio catalogue loaded every MP3 and base64-encoded them to render two
+# columns.
+#
+# 512Mi costs 256Mi of the 1.6Gi this node has available. It matches what
+# `clusters/cloud/values/aladhan.yaml` already asks for, so both deployments now
+# say the same thing about the same process.
 resources:
   requests:
     cpu: 100m
-    memory: 128Mi
+    # Close to what it actually holds at rest, so the scheduler reserves the
+    # truth rather than a number nobody has checked since the service was
+    # smaller.
+    memory: 256Mi
   limits:
     cpu: "1"
-    memory: 256Mi
+    memory: 512Mi
