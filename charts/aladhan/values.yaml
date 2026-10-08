@@ -111,10 +111,12 @@ env:
   # aaguid. Never on an internet-facing deployment: that attestation can be
   # minted from any Xcode against any device.
   APP_ENV: development
-  # Off until the iOS client implements DCAppAttestService. The server default
-  # is closed, so leaving this out would make /mosques/{uid}/calendar and
-  # /times stop answering the app the moment the new image lands here.
-  ATTEST_ENFORCED: "false"
+  # Closed, like the server's own default. It used to be "false" here, and the
+  # Pi — which installs this chart with no values file — ran with the gate open
+  # without anybody having decided it: any deployment that forgot to say so
+  # would have done the same. A forgotten value now gives a closed door. The Pi
+  # opens it explicitly in `clusters/pi/argocd/apps/adhan.yaml`.
+  ATTEST_ENFORCED: "true"
   # glibc gives each thread its own malloc arena, and each arena keeps its own
   # heap. This service is thoroughly threaded — AnyIO workers, the APScheduler
   # that plays the adhan, the daemon threads the OSM import starts — so resident
