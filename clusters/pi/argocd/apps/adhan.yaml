@@ -9,6 +9,15 @@ spec:
     repoURL: https://github.com/aminekun90/k8s-project.git
     targetRevision: main
     path: charts/aladhan
+    helm:
+      # The chart closes the attestation gate by default; this node opens it,
+      # on purpose and in writing. The environment is the ceiling: with it open,
+      # an administrator can close the gate from the portal once a device has
+      # proven the exchange — and reopen it — without a deploy. Closed here, the
+      # portal could never open it again.
+      valuesObject:
+        env:
+          ATTEST_ENFORCED: "false"
   destination:
     server: https://kubernetes.default.svc
     namespace: adhan
