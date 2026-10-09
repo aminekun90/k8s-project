@@ -24,6 +24,11 @@ spec:
         app: adhan-api
     spec:
       # The app no longer talks to the Kubernetes API: git says which image runs.
+      # Named rather than omitted: dropping `serviceAccountName` left the
+      # deprecated `serviceAccount` field behind on the live Deployment, the API
+      # copied it back, and every new pod asked for the ServiceAccount this
+      # chart had just deleted — ten minutes of outage on 2026-10-09.
+      serviceAccountName: default
       automountServiceAccountToken: false
       hostNetwork: {{ .Values.hostNetwork }}
       {{- if .Values.hostNetwork }}
