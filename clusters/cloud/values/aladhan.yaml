@@ -40,13 +40,11 @@ bluetooth:
 nodeSelector: {}
 
 # --- Updates ---------------------------------------------------------------
-# No approval gate: the "Approve" button lives in the player's About dialog,
-# which nobody watches on this deployment. Held images would simply never ship.
-keel:
-  enabled: true
-  policy: force
-  pollSchedule: "@every 1m"
-  approvals: 0
+# Pin the image here, by the tag publish.yml gives every main commit:
+#   image:
+#     tag: sha-<full commit sha>
+# and Argo CD deploys it. Keel did this until 2026-10-09; it was removed, and a
+# version in git says what runs without anybody reading the cluster.
 
 # The force-update button belongs to the same UI. Without it the pod needs no
 # ServiceAccount that can patch its own Deployment.

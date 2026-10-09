@@ -7,26 +7,10 @@ image:
   tag: latest
   pullPolicy: Always
 
-# OTA auto-update via Keel (https://keel.sh): Keel polls Docker Hub and
-# redeploys this Deployment whenever the :latest digest changes — no manual
-# rollout, no inbound port (poll, not webhook — NAT-friendly). Install Keel
-# once on the cluster (deploy.sh does it).
 # "Force update" button: grants the app a ServiceAccount that can patch (restart)
 # its own Deployment, so the UI can re-pull the latest image on demand.
 forceUpdate:
   enabled: true
-
-keel:
-  enabled: true
-  # force = update on digest change of a mutable tag (latest).
-  policy: force
-  pollSchedule: "@every 1m"
-  # approvals > 0 holds new images as a *pending approval* instead of deploying
-  # them. The Adhan app surfaces it and approves it from its own UI (About
-  # dialog). Set to 0 for fully automatic updates.
-  approvals: 1
-  # In-cluster Keel admin API the app proxies to approve updates.
-  url: http://keel.keel.svc.cluster.local:9300
 
 # The speaker half: Sonos/Freebox/Bluetooth discovery, and the scheduler that
 # plays the adhan on them. Off, the app mounts no device or audio routes and
