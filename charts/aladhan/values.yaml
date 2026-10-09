@@ -77,6 +77,10 @@ ingress:
   tls:
     enabled: false
     secretName: ""
+  # HTTPS twin of `host`, certified by a traefik ACME resolver (see
+  # clusters/pi/traefik-helmchartconfig.yaml). Empty means no second Ingress.
+  secureHost: ""
+  certResolver: ""
 
 # Values the deployment must not carry in git: AUTH_SECRET, DB_PASSWORD.
 # Create the Secret out of band and name it here; every key in it is exported

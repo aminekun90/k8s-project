@@ -1,4 +1,5 @@
-# Pins traefik's LoadBalancer address the same way pihole-dns pins its own.
+# Pins traefik's LoadBalancer address the same way pihole-dns pins its own, and
+# gives the LAN a real HTTPS certificate.
 #
 # k3s ships traefik as a bundled HelmChart and RE-APPLIES it on every k3s
 # restart. That re-apply recreated the Service, MetalLB re-reconciled both
@@ -8,6 +9,27 @@
 #
 # HelmChartConfig (not HelmChart) so k3s merges these values into its own chart
 # definition; editing the bundled HelmChart directly is overwritten on restart.
+# Not managed by Argo CD — apply it by hand:
+#
+#   kubectl apply -f clusters/pi/traefik-helmchartconfig.yaml
+#
+# --- HTTPS on the LAN, without exposing anything -------------------------------
+# The iOS App Store build only talks to an https host it allowlists; `.home` can
+# never get a certificate an iPhone trusts. A free DuckDNS name can: Let's
+# Encrypt validates it by a DNS TXT record (DNS-01), so nothing on the internet
+# ever connects to the Pi and no port is opened on the router.
+#
+# Public DNS points the name at 127.0.0.1; Pi-hole answers 192.168.1.42 on the
+# LAN (charts/pihole localApps). Off the LAN the app fails instantly against its
+# own loopback instead of probing whatever sits at .42 on a stranger's network.
+#
+# The token lives in a Secret created out of band, never in git:
+#
+#   kubectl -n kube-system create secret generic duckdns-token \
+#     --from-literal=token='<DuckDNS token>'
+#
+# `optional: true` so a missing Secret costs the certificate, not traefik — the
+# whole LAN ingress goes through this pod.
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
@@ -19,3 +41,27 @@ spec:
       annotations:
         metallb.io/loadBalancerIPs: "192.168.1.42"
         metallb.io/address-pool: "traefik-pool"
+    env:
+      - name: DUCKDNS_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: duckdns-token
+            key: token
+            optional: true
+    certificatesResolvers:
+      duckdns:
+        acme:
+          storage: /data/acme.json
+          dnsChallenge:
+            provider: duckdns
+            # Public resolvers, not the cluster's: Pi-hole overrides the name
+            # with a LAN address and must not answer the propagation check.
+            resolvers:
+              - "1.1.1.1:53"
+              - "9.9.9.9:53"
+    # acme.json must survive a pod restart: re-issuing on every k3s restart
+    # would hit Let's Encrypt's five-per-week duplicate limit within days.
+    persistence:
+      enabled: true
+      size: 128Mi
+      storageClass: local-path

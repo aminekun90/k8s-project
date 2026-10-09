@@ -32,3 +32,33 @@ spec:
                 port:
                   number: {{ .Values.service.port }}
 {{- end }}
+{{- with .Values.ingress.secureHost }}
+---
+# The same API under a name that can carry a certificate an iPhone trusts. Its
+# own Ingress rather than a second host on the one above: the resolver would
+# otherwise also try to certify `.home`, which no public CA will ever sign.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: adhan-api-https
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: adhan-api
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ required "ingress.certResolver is required with ingress.secureHost" $.Values.ingress.certResolver | quote }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  rules:
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: adhan-api
+                port:
+                  number: {{ $.Values.service.port }}
+{{- end }}
