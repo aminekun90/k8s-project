@@ -10,34 +10,17 @@ spec:
     targetRevision: main
     path: charts/aladhan
     helm:
-      # The chart closes the attestation gate by default; this node opens it,
-      # on purpose and in writing. The environment is the ceiling: with it open,
-      # an administrator can close the gate from the portal once a device has
-      # proven the exchange — and reopen it — without a deploy. Closed here, the
-      # portal could never open it again.
-      valuesObject:
-        env:
-          ATTEST_ENFORCED: "false"
+      # Relative to `path`. Holds the pinned image and this node's overrides.
+      valueFiles:
+        - ../../clusters/pi/values/aladhan.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: adhan
-  # Auto-sync: the cluster follows git automatically, except the image.
+  # Auto-sync: the cluster follows git, the image included. A deployment is a
+  # commit to clusters/pi/values/aladhan.yaml, made by aladhan_api's publish.yml.
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      # Without it, any other change to the Deployment would sync the chart's
-      # `:latest` back over the digest the app pinned — ignoreDifferences only
-      # hides the drift, it does not keep it.
-      - RespectIgnoreDifferences=true
-  # The app pins its own image by digest (About dialog → "Update", which calls
-  # /update/force), and so does a deploy by `sha-` tag. That digest lives only in
-  # the cluster: Argo must not flag it as drift, nor revert it.
-  ignoreDifferences:
-    - group: apps
-      kind: Deployment
-      name: adhan-api
-      jsonPointers:
-        - /spec/template/spec/containers/0/image

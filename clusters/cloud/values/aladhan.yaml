@@ -40,16 +40,12 @@ bluetooth:
 nodeSelector: {}
 
 # --- Updates ---------------------------------------------------------------
-# Pin the image here, by the tag publish.yml gives every main commit:
+# The image is pinned the way the Pi's is: publish.yml writes
 #   image:
-#     tag: sha-<full commit sha>
-# and Argo CD deploys it. Keel did this until 2026-10-09; it was removed, and a
-# version in git says what runs without anybody reading the cluster.
-
-# The force-update button belongs to the same UI. Without it the pod needs no
-# ServiceAccount that can patch its own Deployment.
-forceUpdate:
-  enabled: false
+#     tag: sha-<commit>@sha256:<digest>
+# into a values file after every build of main, and Argo CD deploys it. The
+# write step only targets clusters/pi today — add this file to it when the
+# cloud deployment is installed.
 
 # --- Exposure --------------------------------------------------------------
 ingress:

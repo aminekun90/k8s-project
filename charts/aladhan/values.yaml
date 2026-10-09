@@ -2,15 +2,12 @@ replicaCount: 1
 
 image:
   repository: aminekun90/adhan-api
-  # Mutable tag so the cluster always runs the newest build. deploy.sh /
-  # the app CI pushes both <version> and latest.
+  # A cluster's values file pins this to `sha-<commit>@sha256:<digest>`, written
+  # by aladhan_api's publish.yml after every build of main (Pi:
+  # clusters/pi/values/aladhan.yaml). `latest` is only the fallback for a bare
+  # `helm template`.
   tag: latest
   pullPolicy: Always
-
-# "Force update" button: grants the app a ServiceAccount that can patch (restart)
-# its own Deployment, so the UI can re-pull the latest image on demand.
-forceUpdate:
-  enabled: true
 
 # The speaker half: Sonos/Freebox/Bluetooth discovery, and the scheduler that
 # plays the adhan on them. Off, the app mounts no device or audio routes and
