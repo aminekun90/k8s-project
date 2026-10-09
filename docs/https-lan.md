@@ -6,15 +6,19 @@ par un iPhone. Ce nom-ci le peut, sans rien exposer sur internet et à 0 €.
 
 | Pièce | Où | Rôle |
 |-|-|-|
-| Nom DuckDNS | duckdns.org, compte aminekun90@github | `qibla-api.duckdns.org`, enregistrement public **127.0.0.1** |
+| Nom DuckDNS | duckdns.org, compte aminekun90@github | `qibla-api.duckdns.org`, enregistrement public **192.168.1.42** (l'IP privée de la Pi) |
 | Certificat | Traefik, résolveur `duckdns` | Let's Encrypt en **DNS-01** : un TXT, aucune connexion entrante, aucun port ouvert |
 | Stockage | PVC `kube-system/traefik` (local-path) | `acme.json` survit aux redémarrages de k3s |
 | Jeton | Secret `kube-system/duckdns-token`, clé `token` | jamais dans git |
 | Route | chart adhan, `ingress.secureHost` | Ingress `adhan-api-https` en websecure |
 | DNS du LAN | chart pihole, `localApps` | le nom → 192.168.1.42 |
 
-Hors du domicile, le nom répond 127.0.0.1 : l'app échoue aussitôt contre son propre
-loopback et reste sur Mawaqit.
+Le DNS public donne l'IP **privée** de la Pi, à tout le monde. Hors du domicile, cette
+adresse est l'appareil d'un inconnu — ou rien, en 4G : TLS échoue avant l'envoi de la
+requête (personne d'autre ne peut présenter ce certificat), ou la lecture abandonne
+après 5 s côté app. L'app reste alors sur Mawaqit.
+
+D'abord réglé sur `127.0.0.1`, changé le jour même : voir le piège du DNS IPv6 plus bas.
 
 ## Vérifier
 
@@ -32,7 +36,7 @@ kubectl -n kube-system logs deploy/traefik | grep -i acme
 - **Régénérer le jeton DuckDNS** : bouton sur duckdns.org, puis
   `kubectl -n kube-system create secret generic duckdns-token --from-literal=token=… --dry-run=client -o yaml | kubectl apply -f -`
   et `kubectl -n kube-system rollout restart deploy/traefik`
-- **Changer l'IP publique du nom** : `curl "https://www.duckdns.org/update?domains=qibla-api&token=…&ip=127.0.0.1"`
+- **Changer l'IP publique du nom** : `curl "https://www.duckdns.org/update?domains=qibla-api&token=…&ip=192.168.1.42"`
 - **Pi-hole** est installé par Helm, **pas** par Argo :
   `helm upgrade pihole charts/pihole -n pihole --set existingSecret=pihole-admin`
 
@@ -44,7 +48,9 @@ kubectl -n kube-system logs deploy/traefik | grep -i acme
   dans un pod vivant. Après tout changement de `localApps`,
   `kubectl -n pihole rollout restart deploy/pihole` — environ 30 s sans DNS sur le LAN
 - **Les appareils du LAN interrogent d'abord le DNS IPv6 de la Freebox**, pas le
-  Pi-hole : ils obtiennent la réponse publique (127.0.0.1) et manquent la Pi. Vérifier
-  avec `scutil --dns` sur un Mac. Le résolveur de Free ne filtre pas les IP privées
+  Pi-hole (`scutil --dns` sur un Mac). Avec `127.0.0.1` en public, ils manquaient la
+  Pi ; couper l'IPv6 n'est pas possible. D'où l'IP privée dans le DNS public — le
+  résolveur de Free ne filtre pas les IP privées. L'enregistrement Pi-hole reste,
+  redondant mais sans effet de bord
 - Le renouvellement passe par les résolveurs publics (1.1.1.1, 9.9.9.9), pas par le
   Pi-hole qui surcharge ce nom
