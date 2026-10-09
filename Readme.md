@@ -161,22 +161,26 @@ helm upgrade adhan charts/aladhan -n adhan
 
 ---
 
-## Image updates
+## Image updates — a deployment is a commit
 
-The images are **pinned by digest**, never followed by tag:
+```
+merge on aladhan_api main → publish.yml: tests, build, push sha-<commit>
+  → commits image.tag: sha-<commit>@sha256:<digest> to clusters/pi/values/aladhan.yaml
+  → Argo CD syncs → the Pi runs it
+```
 
-- **Adhan on the Pi**: the app's About dialog says when Docker Hub holds a newer
-  `:latest`, and *Update* pins the Deployment to that digest through the
-  Kubernetes API (`/update/force`). k3s does not re-pull a moving `:latest` on a
-  restart, so the digest is what makes it pull. To deploy one exact commit,
-  resolve the arm64 digest of the `sha-<commit>` tag and `kubectl set image`.
-- **Adhan in the cloud**: `image.tag: sha-<commit>` in
-  `clusters/cloud/values/aladhan.yaml`, deployed by Argo CD.
+- **Nothing in the cluster watches a registry.** The CI that built the image
+  writes which one runs, in git. `git log clusters/pi/values/aladhan.yaml` is the
+  deployment history; **`git revert` of one of those commits is a rollback**.
+- Tag and digest together: the tag names the commit, the digest makes the
+  reference immutable.
+- The write needs the `K8S_PROJECT_DEPLOY_KEY` secret in aladhan_api: the private
+  half of a deploy key with write access to this repository only.
 - **Increaser** is a CronJob (`:latest` + `pullPolicy: Always`) that re-pulls the
   latest image on every scheduled run — no watcher needed.
 
-Keel did this job until 2026-10-09. It was removed: nobody had approved an
-update in a month, and digest pinning had left it no tag to follow.
+History: Keel did this until 2026-10-09, under manual approval nobody gave, then
+an in-app button pinned digests behind git's back. Both are gone.
 
 ---
 
@@ -197,14 +201,13 @@ argocd/
 ├── root.yaml          # watches clusters/pi/argocd/apps/, auto-registers child apps
 └── apps/
     ├── pihole.yaml    # auto-sync
-    ├── adhan.yaml     # auto-sync; leaves the pinned image digest alone
+    ├── adhan.yaml     # auto-sync; image pinned in clusters/pi/values/aladhan.yaml
     └── increaser.yaml # auto-sync
 ```
 
 `deploy.sh` installs Argo CD and registers the **selected** apps (it applies
 just the chosen `clusters/pi/argocd/apps/*.yaml`). Apps **auto-sync**, so the cluster follows
-git automatically, except the Adhan **image**, which is pinned by digest (see
-above) and kept by `RespectIgnoreDifferences`.
+git automatically — the Adhan **image** included (see above).
 
 Apply `clusters/pi/argocd/root.yaml` instead if you want the App-of-Apps to install
 **everything** at once.

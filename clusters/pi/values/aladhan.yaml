@@ -1,0 +1,16 @@
+# Values for the Pi's `adhan` release, read by clusters/pi/argocd/apps/adhan.yaml.
+#
+# `image.tag` is written by aladhan_api's publish.yml after every build of main —
+# one commit per deployment, so `git log` of this file is the deployment history
+# and `git revert` is a rollback. Tag *and* digest: the tag says which commit, the
+# digest makes the reference immutable.
+image:
+  tag: sha-3ca0c8f098627dc8135f0e441b7d2a0525052199@sha256:1627f35d27aa2c6a7845da97156bf6562e19cb9106140884524033dc642bc1a3
+
+env:
+  # The chart closes the attestation gate by default; this node opens it, on
+  # purpose and in writing. The environment is the ceiling: with it open, an
+  # administrator can close the gate from the portal once a device has proven
+  # the exchange — and reopen it — without a deploy. Closed here, the portal
+  # could never open it again.
+  ATTEST_ENFORCED: "false"

@@ -23,9 +23,8 @@ spec:
       labels:
         app: adhan-api
     spec:
-      {{- if .Values.forceUpdate.enabled }}
-      serviceAccountName: adhan-api
-      {{- end }}
+      # The app no longer talks to the Kubernetes API: git says which image runs.
+      automountServiceAccountToken: false
       hostNetwork: {{ .Values.hostNetwork }}
       {{- if .Values.hostNetwork }}
       dnsPolicy: {{ .Values.dnsPolicy }}
