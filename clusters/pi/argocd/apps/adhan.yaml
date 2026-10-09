@@ -21,16 +21,20 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: adhan
-  # Auto-sync: the cluster follows git automatically. Image updates still go
-  # through Keel approval (approve from the Adhan app) — see ignoreDifferences.
+  # Auto-sync: the cluster follows git automatically, except the image.
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-  # Keel mutates the live Deployment image on OTA updates. Let it: don't flag the
-  # container image as drift so Argo doesn't fight Keel over the same field.
+      # Without it, any other change to the Deployment would sync the chart's
+      # `:latest` back over the digest the app pinned — ignoreDifferences only
+      # hides the drift, it does not keep it.
+      - RespectIgnoreDifferences=true
+  # The app pins its own image by digest (About dialog → "Update", which calls
+  # /update/force), and so does a deploy by `sha-` tag. That digest lives only in
+  # the cluster: Argo must not flag it as drift, nor revert it.
   ignoreDifferences:
     - group: apps
       kind: Deployment

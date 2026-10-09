@@ -161,25 +161,28 @@ helm upgrade adhan charts/aladhan -n adhan
 
 ---
 
-## OTA auto-updates (Keel)
+## Image updates
 
-`deploy.sh` installs **[Keel](https://keel.sh)**, which polls Docker Hub and
-keeps the cluster on the newest images — no manual rollout, no inbound port
-(poll, not webhook → NAT-friendly). Set `KEEL_ENABLED=false ./deploy.sh` to skip.
+The images are **pinned by digest**, never followed by tag:
 
-- **Adhan** runs `:latest` with `keel.sh/approvals: "1"` → a new image becomes a
-  **pending approval** instead of deploying. You approve it **from the Adhan app**
-  (About dialog → *Approve update*), which proxies the Keel admin API
-  (`KEEL_URL`). Set `keel.approvals: 0` in `charts/aladhan/values.yaml` for
-  fully automatic updates.
+- **Adhan on the Pi**: the app's About dialog says when Docker Hub holds a newer
+  `:latest`, and *Update* pins the Deployment to that digest through the
+  Kubernetes API (`/update/force`). k3s does not re-pull a moving `:latest` on a
+  restart, so the digest is what makes it pull. To deploy one exact commit,
+  resolve the arm64 digest of the `sha-<commit>` tag and `kubectl set image`.
+- **Adhan in the cloud**: `image.tag: sha-<commit>` in
+  `clusters/cloud/values/aladhan.yaml`, deployed by Argo CD.
 - **Increaser** is a CronJob (`:latest` + `pullPolicy: Always`) that re-pulls the
   latest image on every scheduled run — no watcher needed.
+
+Keel did this job until 2026-10-09. It was removed: nobody had approved an
+update in a month, and digest pinning had left it no tag to follow.
 
 ---
 
 ## GitOps (Argo CD)
 
-Keel updates **images**; **Argo CD** keeps the cluster in sync with the **repo**
+**Argo CD** keeps the cluster in sync with the **repo**
 (charts, values, manifests). It pulls this repo (NAT-friendly) and shows a diff
 whenever git changes — you review it and click **Sync**.
 
@@ -194,14 +197,14 @@ argocd/
 ├── root.yaml          # watches clusters/pi/argocd/apps/, auto-registers child apps
 └── apps/
     ├── pihole.yaml    # auto-sync
-    ├── adhan.yaml     # auto-sync; ignores image drift (managed by Keel)
+    ├── adhan.yaml     # auto-sync; leaves the pinned image digest alone
     └── increaser.yaml # auto-sync
 ```
 
 `deploy.sh` installs Argo CD and registers the **selected** apps (it applies
 just the chosen `clusters/pi/argocd/apps/*.yaml`). Apps **auto-sync**, so the cluster follows
-git automatically. Adhan **image** updates still require approval (Keel → approve
-from the Adhan app); only chart/manifest changes auto-apply.
+git automatically, except the Adhan **image**, which is pinned by digest (see
+above) and kept by `RespectIgnoreDifferences`.
 
 Apply `clusters/pi/argocd/root.yaml` instead if you want the App-of-Apps to install
 **everything** at once.
@@ -232,7 +235,7 @@ FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh  # also point the Freebox DHCP at Pi-hol
 ```
 
 For the selected components it installs **MetalLB** (if a LoadBalancer is
-needed), creates/reuses the Pi-hole admin Secret, installs **Keel** (for Adhan)
+needed), creates/reuses the Pi-hole admin Secret
 and **Argo CD**, then registers the chosen apps — which auto-sync from git.
 Prerequisites: a running cluster with `kubectl` + `helm`.
 

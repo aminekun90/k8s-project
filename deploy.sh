@@ -12,15 +12,14 @@
 #   PIHOLE_PASSWORD=secret ./deploy.sh       # non-interactive Pi-hole password
 #   ADHAN_NODE=raspberrypi ./deploy.sh       # pin Adhan to a node (helm path only)
 #   FREEBOX_DNS_IP=192.168.1.42 ./deploy.sh  # point the Freebox DHCP at Pi-hole
-#   KEEL_ENABLED=false ./deploy.sh           # skip the Keel OTA auto-updater
 #   ARGOCD_ENABLED=false ./deploy.sh         # deploy charts with helm directly (no GitOps)
 #
 # Prerequisites: a running Kubernetes cluster (e.g. k3s) with `kubectl` and
-# `helm` on PATH. Everything else (MetalLB, Keel, Argo CD) is installed here.
+# `helm` on PATH. Everything else (MetalLB, Argo CD) is installed here.
 #
 # With Argo CD enabled (default), charts are deployed from git and kept in sync
-# automatically. Adhan image updates still go through Keel approval (approve from
-# the Adhan app's About dialog).
+# automatically. The Adhan image is pinned by digest from the app's About dialog
+# ("Update"), which Argo CD leaves alone (see clusters/pi/argocd/apps/adhan.yaml).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,7 +30,6 @@ ADHAN_NS="${ADHAN_NS:-adhan}"
 INCREASER_NS="${INCREASER_NS:-increaser}"
 PIHOLE_SECRET="${PIHOLE_SECRET:-pihole-admin}"
 ARGOCD_ENABLED="${ARGOCD_ENABLED:-true}"
-KEEL_ENABLED="${KEEL_ENABLED:-true}"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "ERROR: '$1' not found in PATH"; exit 1; }; }
 need kubectl
@@ -93,17 +91,6 @@ if want pihole; then
     kubectl -n "$PIHOLE_NS" create secret generic "$PIHOLE_SECRET" --from-literal=password="$PW"
     echo "    Created Secret '$PIHOLE_SECRET'."
   fi
-fi
-
-# --- Keel (OTA auto-updater for the Adhan Deployment) ------------------------
-if want adhan && [ "$KEEL_ENABLED" = "true" ]; then
-  echo "==> Keel (OTA auto-updater — polls Docker Hub, redeploys on new images)"
-  helm repo add keel https://charts.keel.sh >/dev/null 2>&1 || true
-  helm repo update keel >/dev/null
-  helm upgrade --install keel keel/keel \
-    --namespace keel --create-namespace \
-    --set helmProvider.enabled=false \
-    --set image.tag=latest
 fi
 
 # --- Deploy the selected charts ----------------------------------------------
