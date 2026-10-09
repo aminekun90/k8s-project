@@ -14,3 +14,9 @@ env:
   # the exchange — and reopen it — without a deploy. Closed here, the portal
   # could never open it again.
   ATTEST_ENFORCED: "false"
+
+# HTTPS on the LAN for the iOS Release build, which refuses plain HTTP and any
+# host it has not allowlisted. LAN-only: public DNS points the name at 127.0.0.1.
+ingress:
+  secureHost: qibla-api.duckdns.org
+  certResolver: duckdns
