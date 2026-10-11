@@ -27,3 +27,8 @@ ingress:
 database:
   enabled: true
   legacySqlitePath: /app/src/data/cities.db
+
+# The session and TOTP keys, out of the database — copied from where the app had
+# stored them, never regenerated (a new TOTP key loses every second factor).
+# Created by hand: AUTH_SECRET, TOTP_ENCRYPTION_KEY.
+envSecret: adhan-api-env
