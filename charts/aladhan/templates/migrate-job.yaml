@@ -1,0 +1,82 @@
+{{- if .Values.database.enabled }}
+# Brings the database to the image's schema before the image serves: the API
+# refuses to start on a database behind its migrations.
+#
+# A Helm pre-upgrade hook, which Argo CD runs as PreSync — so for every new
+# image, before the Deployment changes. It also imports the SQLite-era file once
+# (`database.legacySqlitePath`), into an empty database, and skips it after.
+#
+# An image older than the Postgres move has no `migrate` command; the job then
+# does nothing and succeeds, so this chart can be deployed ahead of the image.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: adhan-api-migrate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: adhan-api-migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  # Twelve minutes covers the first run: the cities load, then the SQLite import.
+  activeDeadlineSeconds: 720
+  template:
+    metadata:
+      labels:
+        app: adhan-api-migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              if ! grep -q '"migrate"' entrypoint.sh; then
+                echo "This image predates the Postgres move: nothing to migrate."
+                exit 0
+              fi
+              # On the very first sync the StatefulSet may still be starting.
+              for attempt in $(seq 60); do
+                uv run alembic current >/dev/null 2>&1 && break
+                echo "Waiting for the database ($attempt/60)…"
+                sleep 5
+              done
+              exec ./entrypoint.sh migrate
+          env:
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- include "aladhan.databaseEnv" . | nindent 12 }}
+            {{- with .Values.database.legacySqlitePath }}
+            - name: LEGACY_SQLITE_PATH
+              value: {{ . | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.database.legacySqlitePath }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/src/data
+              readOnly: true
+          {{- end }}
+      {{- if .Values.database.legacySqlitePath }}
+      volumes:
+        - name: data
+          hostPath:
+            path: {{ .Values.dataPath }}
+            type: Directory
+      {{- end }}
+{{- end }}

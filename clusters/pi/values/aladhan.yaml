@@ -20,3 +20,15 @@ env:
 ingress:
   secureHost: qibla-api.duckdns.org
   certResolver: duckdns
+
+# PostgreSQL beside the API, since 2026-10. The Secret `qibla-db` is created by
+# hand (see the chart's values.yaml); the SQLite file stays where it was, as a
+# record, and is imported once by the first migration job that can.
+database:
+  enabled: true
+  legacySqlitePath: /app/src/data/cities.db
+
+# The session and TOTP keys, out of the database — copied from where the app had
+# stored them, never regenerated (a new TOTP key loses every second factor).
+# Created by hand: AUTH_SECRET, TOTP_ENCRYPTION_KEY.
+envSecret: adhan-api-env

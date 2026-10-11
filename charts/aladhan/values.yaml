@@ -37,7 +37,8 @@ timezone: Europe/Paris
 #   nodeSelector: { kubernetes.io/hostname: raspberrypi }
 nodeSelector: {}
 
-# Persisted app data (prayer DB, Freebox token) on the node. Node-local
+# Persisted app data (Freebox token, OSM cache, and the SQLite-era database
+# kept as a record) on the node. Node-local
 # hostPath: it only survives reschedules onto the SAME node, so set
 # nodeSelector above to keep the pod (and its data) on one Pi.
 dataPath: /home/pi/data
@@ -82,6 +83,63 @@ ingress:
   secureHost: ""
   certResolver: ""
 
+# --- PostgreSQL -------------------------------------------------------------
+# Off by default so a bare `helm template` renders what it always did. On, the
+# chart runs Postgres beside the API (postgres.yaml), migrates before every
+# image (migrate-job.yaml), and dumps it nightly (backup-cronjob.yaml).
+#
+# The password is the one value that is not here. Create the Secret first:
+#
+#   kubectl -n adhan create secret generic qibla-db \
+#     --from-literal=DB_PASSWORD="$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))')"
+#
+# Images from before the Postgres move ignore all of it: they read DB_TYPE,
+# which is never set, and keep their SQLite file.
+database:
+  enabled: false
+  name: qibla
+  user: qibla_app
+  secretName: qibla-db
+  # The SQLite-era file, as the migration job sees it under /app/src/data.
+  # Imported once into an empty database, skipped afterwards. Empty: no import.
+  legacySqlitePath: ""
+
+postgres:
+  image: postgres:17.9-alpine
+  storageClass: local-path
+  # The relational data is about 100 MB where the SQLite file was 1.6 GB — that
+  # was the 13 million GeoNames rows, which are now 136 000. Room to grow.
+  storage: 5Gi
+  # Sized for a Pi with ~1.7 GiB available beside the API's 512Mi limit. The
+  # working set is small; most of the cache is the kernel's, not Postgres'.
+  settings:
+    shared_buffers: 64MB
+    effective_cache_size: 256MB
+    work_mem: 4MB
+    maintenance_work_mem: 32MB
+    max_connections: "30"
+    # An SD card: random reads are not the 4× of a spinning disk.
+    random_page_cost: "2.0"
+    # Fewer, larger checkpoints: each write costs the card a little life.
+    checkpoint_timeout: 15min
+    max_wal_size: 512MB
+    log_min_duration_statement: 500ms
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 384Mi
+
+backup:
+  enabled: true
+  schedule: "30 3 * * *"
+  # Must exist on the node, owned by `runAsUser` (the pi user).
+  hostPath: /home/pi/backups/postgres
+  runAsUser: 1000
+  keepDays: 14
+
 # Values the deployment must not carry in git: AUTH_SECRET, DB_PASSWORD.
 # Create the Secret out of band and name it here; every key in it is exported
 # into the container. Empty means the app falls back to its own defaults, which
@@ -89,7 +147,7 @@ ingress:
 envSecret: ""
 
 # Extra plain environment variables, for the ones that are configuration rather
-# than credentials (DB_TYPE, DB_HOST, APP_ENV…).
+# than credentials (APP_ENV, …). The database's come from `database` above.
 env:
   # This node serves the build `dev-local.sh` produces, so App Attest verifies
   # against `WGF76DKK38.io.babikher.qibla.local` and accepts the development

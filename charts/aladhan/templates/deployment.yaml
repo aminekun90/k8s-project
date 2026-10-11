@@ -54,6 +54,9 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if .Values.database.enabled }}
+            {{- include "aladhan.databaseEnv" . | nindent 12 }}
+            {{- end }}
           {{- with .Values.envSecret }}
           # Credentials live in a Secret created out of band, never in git.
           envFrom:
@@ -64,8 +67,8 @@ spec:
           securityContext:
             privileged: true  # access the host ALSA device / Bluetooth D-Bus
           {{- end }}
-          # Migrations run on startup; startupProbe gives them time before
-          # liveness kicks in.
+          # Migrations run in the pre-upgrade job (migrate-job.yaml); the app only
+          # checks it is at head. The startup probe still covers a slow boot.
           startupProbe:
             httpGet:
               path: /api/v1/health
