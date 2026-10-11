@@ -1,0 +1,115 @@
+{{- if .Values.database.enabled }}
+# PostgreSQL for the API, on the node's local-path storage.
+#
+# One replica and no operator: a Pi has one disk, and a second instance on it
+# would be a copy that fails with the first. Durability comes from the nightly
+# dump copied off the Pi (backup-cronjob.yaml), not from replication.
+apiVersion: v1
+kind: Service
+metadata:
+  name: qibla-db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: qibla-db
+spec:
+  type: ClusterIP
+  selector:
+    app: qibla-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qibla-db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: qibla-db
+spec:
+  serviceName: qibla-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qibla-db
+  template:
+    metadata:
+      labels:
+        app: qibla-db
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        # The alpine image's own `postgres` user: the entrypoint never needs root
+        # when the data directory is already writable, which local-path gives.
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        runAsNonRoot: true
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image | quote }}
+          imagePullPolicy: IfNotPresent
+          args:
+            {{- range $key, $value := .Values.postgres.settings }}
+            - "-c"
+            - "{{ $key }}={{ $value }}"
+            {{- end }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.database.name | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.database.user | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: DB_PASSWORD
+            # A subdirectory: the volume's root holds `lost+found` on some
+            # provisioners, and initdb refuses a non-empty directory.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            failureThreshold: 60
+            periodSeconds: 2
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        annotations:
+          # Argo's `prune` must never take the data with the release.
+          argocd.argoproj.io/sync-options: Prune=false
+          helm.sh/resource-policy: keep
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.postgres.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
+{{- end }}

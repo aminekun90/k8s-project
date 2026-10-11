@@ -1,0 +1,77 @@
+{{- if and .Values.database.enabled .Values.backup.enabled }}
+# A nightly `pg_dump`, kept on the node for `backup.keepDays`.
+#
+# On the node is not a backup — the SD card is the thing most likely to fail.
+# `scripts/pull-postgres-backups.sh` copies the dumps off the Pi; a dump that
+# never leaves it protects against a bad migration and nothing else.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: qibla-db-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: qibla-db-backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: {{ .Values.timezone | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          automountServiceAccountToken: false
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            # The owner of the backup directory on the node, so the dumps can
+            # be pulled over ssh without sudo.
+            runAsUser: {{ .Values.backup.runAsUser }}
+            runAsGroup: {{ .Values.backup.runAsUser }}
+            runAsNonRoot: true
+          containers:
+            - name: dump
+              image: {{ .Values.postgres.image | quote }}
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  target="/backups/qibla-$(date +%Y-%m-%d-%H%M).dump"
+                  pg_dump --format=custom --no-owner --file="$target.partial" \
+                    -h "$DB_HOST" -U "$DB_USER" "$DB_NAME"
+                  # Renamed only once complete: a pull never copies half a dump.
+                  mv "$target.partial" "$target"
+                  find /backups -name 'qibla-*.dump' -mtime +{{ .Values.backup.keepDays }} -delete
+                  ls -lh "$target"
+              env:
+                {{- include "aladhan.databaseEnv" . | nindent 16 }}
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.database.secretName }}
+                      key: DB_PASSWORD
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+                limits:
+                  cpu: 500m
+                  memory: 128Mi
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: backups
+              hostPath:
+                path: {{ .Values.backup.hostPath }}
+                type: Directory
+{{- end }}
