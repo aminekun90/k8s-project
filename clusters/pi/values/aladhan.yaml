@@ -5,7 +5,7 @@
 # and `git revert` is a rollback. Tag *and* digest: the tag says which commit, the
 # digest makes the reference immutable.
 image:
-  tag: sha-d80d30c2e91e900948575d579ec02893244903ea@sha256:66a2d603bbd869ba2b471591aab60c5411580fa884ef8c143dd8b27d1eaf278a
+  tag: sha-9ae97cfffbd6540ec154330d666d10cc023a506f@sha256:a1a76d25e805321e3516496fe8be0d85cb9e44e3c6b99f35cb24fefaed88a861
 
 env:
   # The chart closes the attestation gate by default; this node opens it, on
