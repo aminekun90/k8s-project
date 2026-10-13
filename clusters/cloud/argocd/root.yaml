@@ -1,0 +1,25 @@
+# App-of-Apps for the public node: registers every Application in
+# clusters/cloud/argocd/apps/. Applied once by hand after Argo CD is installed
+# (docs/cloud-ovh.md); everything after that follows git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/aminekun90/k8s-project.git
+    targetRevision: main
+    path: clusters/cloud/argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

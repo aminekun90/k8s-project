@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: adhan
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/aminekun90/k8s-project.git
+    targetRevision: main
+    path: charts/aladhan
+    helm:
+      # Relative to `path`. Holds the pinned image and this node's overrides.
+      valueFiles:
+        - ../../clusters/cloud/values/aladhan.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: adhan
+  # Auto-sync, as on the Pi: a deployment is a commit to the values file.
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
