@@ -1,0 +1,35 @@
+# The public node's traefik: Let's Encrypt certificates and HTTP → HTTPS.
+#
+# Same mechanism as the Pi (clusters/pi/traefik-helmchartconfig.yaml): k3s ships
+# traefik as a bundled HelmChart and re-applies it on every restart, so these
+# values are merged through a HelmChartConfig. Not managed by Argo CD — Argo CD
+# itself is reached through this traefik. Apply it by hand once k3s is up:
+#
+#   kubectl apply -f clusters/cloud/traefik-helmchartconfig.yaml
+#
+# TLS-ALPN-01 rather than the Pi's DNS-01: this node is on the internet, so Let's
+# Encrypt can simply connect to :443. No DNS provider token to keep anywhere.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          storage: /data/acme.json
+          tlsChallenge: {}
+    # Static flags rather than the chart's redirect keys: those were renamed
+    # twice between chart 23 and 37, the flags have not changed since Traefik 2.
+    additionalArguments:
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
+    # acme.json must survive a pod restart, or every k3s restart re-issues and
+    # hits Let's Encrypt's five-per-week duplicate limit.
+    persistence:
+      enabled: true
+      size: 128Mi
+      storageClass: local-path

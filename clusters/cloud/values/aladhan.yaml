@@ -1,25 +1,15 @@
-# The internet-facing deployment: backend of the qibla mobile apps and of the
-# mosque directory. Not the Raspberry Pi.
+# Values for the public `adhan` release on the OVH VPS, read by
+# clusters/cloud/argocd/apps/adhan.yaml.
 #
-#   helm upgrade --install adhan-public ./charts/aladhan \
-#     -n adhan-public --create-namespace \
-#     -f clusters/cloud/values/aladhan.yaml
-#
-# Before the first install, create the Secret this references — it is the one
-# thing that must not be in git:
-#
-#   kubectl -n adhan-public create secret generic adhan-api-env \
-#     --from-literal=AUTH_SECRET="$(python3 -c 'import secrets;print(secrets.token_hex(32))')" \
-#     --from-literal=DB_PASSWORD='…' \
-#     --from-literal=MOSQUE_API_KEYS="ios-app:$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))'),web:$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))')"
-#
-# AUTH_SECRET signs the imam sessions. Left unset the app generates one per
-# start, which signs every imam out on each restart and each rescheduled pod.
-#
-# MOSQUE_API_KEYS decides who may read the directory. Unset means open, which is
-# right on the Pi and wrong here. The `ios-app` key goes into the app; the `web`
-# one is served to the pages by /features and is public by nature. They are
-# separate so either can be revoked without breaking the other.
+# The internet-facing backend: the iOS app's API, the mosque directory, the
+# portal and the treasury. Not the Raspberry Pi, which keeps the Sonos player
+# on the home LAN. Runbook: docs/cloud-ovh.md.
+
+# Pinned like the Pi's, to the Pi's image of the day this file was written.
+# publish.yml writes every build of main into clusters/pi only; add this file to
+# that step at the cutover, so both nodes run the same commit.
+image:
+  tag: sha-9ae97cfffbd6540ec154330d666d10cc023a506f@sha256:a1a76d25e805321e3516496fe8be0d85cb9e44e3c6b99f35cb24fefaed88a861
 
 # --- What this deployment is not ------------------------------------------
 # No speakers here. The device routes drive hardware and take no
@@ -36,56 +26,81 @@ audio:
 bluetooth:
   enabled: false
 
-# Nothing to pin to: no sound card, no speakers' LAN segment.
 nodeSelector: {}
 
-# --- Updates ---------------------------------------------------------------
-# The image is pinned the way the Pi's is: publish.yml writes
-#   image:
-#     tag: sha-<commit>@sha256:<digest>
-# into a values file after every build of main, and Argo CD deploys it. The
-# write step only targets clusters/pi today — add this file to it when the
-# cloud deployment is installed.
-
 # --- Exposure --------------------------------------------------------------
+# Certified by traefik's own ACME resolver (clusters/cloud/traefik-helmchartconfig.yaml),
+# so no cert-manager and no TLS Secret to manage.
 ingress:
   enabled: true
   className: traefik
-  # Set to the real hostname before installing.
+  # The real hostname, once the domain is bought. Left empty, `required` stops
+  # the render: an Ingress for no host would answer every name pointed here.
   host: ""
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
   tls:
-    enabled: true
-    secretName: adhan-api-tls
+    enabled: false
+    secretName: ""
 
 # --- Data ------------------------------------------------------------------
-# Postgres, not SQLite: two replicas over one file is corruption, and the file
-# lives on whichever node the pod last ran on.
+# Postgres beside the API, as on the Pi. Filled at the cutover by a pg_dump of
+# the Pi restored here (docs/cloud-ovh.md), never by the SQLite import: that
+# file is the Pi's past, not this node's.
+database:
+  enabled: true
+  legacySqlitePath: ""
+
+# 4 GB of RAM and NVMe instead of a Pi's 1.7 GiB and an SD card.
+postgres:
+  storage: 20Gi
+  settings:
+    shared_buffers: 256MB
+    effective_cache_size: 1GB
+    work_mem: 8MB
+    maintenance_work_mem: 128MB
+    max_connections: "50"
+    random_page_cost: "1.1"
+    checkpoint_timeout: 15min
+    max_wal_size: 1GB
+    log_min_duration_statement: 500ms
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# Nightly dumps on the VPS disk, which OVH's daily VPS backup carries off the
+# machine; scripts/pull-postgres-backups.sh can pull them too. The directory
+# must exist, owned by uid 1000 (docs/cloud-ovh.md).
+backup:
+  enabled: true
+  hostPath: /var/lib/qibla/backups/postgres
+  runAsUser: 1000
+
+# Claim documents and anything the API writes to disk. One node, so a hostPath
+# is honest here; it would not be with a second node.
+dataPath: /var/lib/qibla/data
+
 env:
-  # Also selects the App Attest identity: production ⇒ the App Store App ID
-  # `LYZLY94CXN.io.babikher.qibla`, and development attestations refused.
+  # Also selects the App Attest identity: production ⇒ the App Store App ID, and
+  # development attestations refused.
   APP_ENV: production
-  # The gate in front of the heavy directory routes. `/calendar` returns a whole
-  # year per call, so 3100 requests copy the directory — a quota cannot tell
-  # that from normal use, because it is the same call.
-  #
-  # ⚠️ Turn this on only once the iOS client attests. Until then it refuses
-  # every device, the app included.
-  ATTEST_ENFORCED: "true"
-  DB_TYPE: postgres
-  DB_HOST: postgres.adhan-public.svc.cluster.local
-  DB_PORT: "5432"
-  DB_NAME: adhan_db
-  DB_USER: app
+  # Open in the environment, as on the Pi: the environment is the ceiling, and
+  # with it open an administrator closes and reopens the gate from the portal
+  # without a deploy. Closed here, the portal could never open it again.
+  ATTEST_ENFORCED: "false"
   CLAIM_DOCUMENT_DIR: /app/var/claim-documents
 
+# Created by hand on the node, never in git (docs/cloud-ovh.md):
+#   AUTH_SECRET, TOTP_ENCRYPTION_KEY — copied from the Pi's `adhan-api-env`,
+#   never regenerated: a new TOTP key loses every second factor, a new session
+#   key signs everyone out.
 envSecret: adhan-api-env
-
-# Claim documents are uploaded proof: personal data, deleted 14 days after the
-# claim is decided. They must outlive the pod, so this needs a real volume
-# before imams start uploading — hostPath here would tie them to one node.
-dataPath: /home/pi/data
 
 replicaCount: 1
 
@@ -95,4 +110,4 @@ resources:
     memory: 256Mi
   limits:
     cpu: "2"
-    memory: 512Mi
+    memory: 768Mi
