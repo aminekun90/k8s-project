@@ -19,9 +19,10 @@
 # Encrypt validates it by a DNS TXT record (DNS-01), so nothing on the internet
 # ever connects to the Pi and no port is opened on the router.
 #
-# Public DNS points the name at 127.0.0.1; Pi-hole answers 192.168.1.42 on the
-# LAN (charts/pihole localApps). Off the LAN the app fails instantly against its
-# own loopback instead of probing whatever sits at .42 on a stranger's network.
+# Public DNS points the name at the Pi's private address, 192.168.1.42: LAN
+# devices ask the Freebox's IPv6 resolver before Pi-hole, so a public 127.0.0.1
+# made them miss the Pi. Elsewhere that address is a stranger's device, which
+# cannot present this certificate — TLS fails before the request is sent.
 #
 # The token lives in a Secret created out of band, never in git:
 #

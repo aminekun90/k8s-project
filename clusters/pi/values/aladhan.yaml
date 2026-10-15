@@ -16,7 +16,7 @@ env:
   ATTEST_ENFORCED: "false"
 
 # HTTPS on the LAN for the iOS Release build, which refuses plain HTTP and any
-# host it has not allowlisted. LAN-only: public DNS points the name at 127.0.0.1.
+# host it has not allowlisted. LAN-only: the name resolves to the Pi's private IP.
 ingress:
   secureHost: qibla-api.duckdns.org
   certResolver: duckdns

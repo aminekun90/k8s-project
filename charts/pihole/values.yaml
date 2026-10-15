@@ -160,7 +160,8 @@ localApps:
   - host: aladhan.home
     ingress: false
   # Same API over HTTPS, for the iOS Release build (see the adhan chart's
-  # ingress.secureHost). Public DNS says 127.0.0.1; this LAN answer wins here.
+  # ingress.secureHost). Public DNS gives the same private IP; this record only
+  # matters if that ever changes.
   - host: qibla-api.duckdns.org
     ingress: false
   - host: k8s.home          # Headlamp — web dashboard for the whole cluster
